@@ -588,25 +588,12 @@ impl TryFrom<&protobuf::ScalarValue> for Scalar {
                     }
                 }
             }
-            Value::DictionaryValue(v) => {
-                let index_type: DataType = v
-                    .index_type
-                    .as_ref()
-                    .ok_or_else(|| Error::required("index_type"))?
-                    .try_into()?;
-
-                let value: Self = v
-                    .value
-                    .as_ref()
-                    .ok_or_else(|| Error::required("value"))?
-                    .as_ref()
-                    .try_into()?;
-
-                ScalarValue::Dictionary(
-                    Box::new(index_type),
-                    Box::new(value.into_value()),
-                )
-            }
+            Value::DictionaryValue(v) => v
+                .value
+                .as_ref()
+                .ok_or_else(|| Error::required("value"))?
+                .as_ref()
+                .try_into()?,
             Value::BinaryValue(v) => ScalarValue::Binary(Some(v.clone())),
             Value::BinaryViewValue(v) => ScalarValue::BinaryView(Some(v.clone())),
             Value::LargeBinaryValue(v) => ScalarValue::LargeBinary(Some(v.clone())),

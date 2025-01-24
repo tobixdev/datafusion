@@ -327,7 +327,6 @@ fn try_cast_literal_to_type(
     }
     try_cast_numeric_literal(lit_value, target_type)
         .or_else(|| try_cast_string_literal(lit_value, target_type))
-        .or_else(|| try_cast_dictionary(lit_value, target_type))
 }
 
 /// Convert a numeric value from one numeric data type to another
@@ -485,35 +484,6 @@ fn try_cast_string_literal(
     Some(scalar_value)
 }
 
-/// Attempt to cast to/from a dictionary type by wrapping/unwrapping the dictionary
-fn try_cast_dictionary(
-    lit_value: &Scalar,
-    target_type: &DataType,
-) -> Option<ScalarValue> {
-    let lit_value_type = lit_value.data_type();
-    let result_scalar = match (lit_value.value(), target_type) {
-        // Unwrap dictionary when inner type matches target type
-        (ScalarValue::Dictionary(_, inner_value), _)
-            if inner_value.data_type() == *target_type =>
-        {
-            (**inner_value).clone()
-        }
-        // Wrap type when target type is dictionary
-        (_, DataType::Dictionary(index_type, inner_type))
-            if inner_type.as_ref() == lit_value_type =>
-        {
-            ScalarValue::Dictionary(
-                index_type.clone(),
-                Box::new(lit_value.value().clone()),
-            )
-        }
-        _ => {
-            return None;
-        }
-    };
-    Some(result_scalar)
-}
-
 /// Cast a timestamp value from one unit to another
 fn cast_between_timestamp(from: &DataType, to: &DataType, value: i128) -> Option<i64> {
     let value = value as i64;
@@ -607,24 +577,25 @@ mod tests {
     #[test]
     fn test_unwrap_cast_comparison_string() {
         let schema = expr_test_schema();
-        let dict = ScalarValue::Dictionary(
-            Box::new(DataType::Int32),
-            Box::new(ScalarValue::from("value")),
-        );
+        let dict_type =
+            DataType::Dictionary(Box::new(DataType::Int32), Box::new(DataType::Utf8));
+        let value = ScalarValue::from("value");
 
         // cast(str1 as Dictionary<Int32, Utf8>) = arrow_cast('value', 'Dictionary<Int32, Utf8>') => str1 = Utf8('value1')
-        let expr_input = cast(col("str1"), dict.data_type()).eq(lit(dict.clone()));
+        let expr_input =
+            cast(col("str1"), dict_type.clone())
+                .eq(cast(lit(value.clone()), dict_type).clone());
         let expected = col("str1").eq(lit("value"));
         assert_eq!(optimize_test(expr_input, &schema), expected);
 
         // cast(tag as Utf8) = Utf8('value') => tag = arrow_cast('value', 'Dictionary<Int32, Utf8>')
         let expr_input = cast(col("tag"), DataType::Utf8).eq(lit("value"));
-        let expected = col("tag").eq(lit(dict.clone()));
+        let expected = col("tag").eq(lit(value.clone()));
         assert_eq!(optimize_test(expr_input, &schema), expected);
 
         // Verify reversed argument order
         // arrow_cast('value', 'Dictionary<Int32, Utf8>') = cast(str1 as Dictionary<Int32, Utf8>) => Utf8('value1') = str1
-        let expr_input = lit(dict.clone()).eq(cast(col("str1"), dict.data_type()));
+        let expr_input = lit(value.clone()).eq(cast(col("str1"), value.data_type()));
         let expected = lit("value").eq(col("str1"));
         assert_eq!(optimize_test(expr_input, &schema), expected);
     }
@@ -633,11 +604,8 @@ mod tests {
     fn test_unwrap_cast_comparison_large_string() {
         let schema = expr_test_schema();
         // cast(largestr as Dictionary<Int32, LargeUtf8>) = arrow_cast('value', 'Dictionary<Int32, LargeUtf8>') => str1 = LargeUtf8('value1')
-        let dict = ScalarValue::Dictionary(
-            Box::new(DataType::Int32),
-            Box::new(ScalarValue::LargeUtf8(Some("value".to_owned()))),
-        );
-        let expr_input = cast(col("largestr"), dict.data_type()).eq(lit(dict));
+        let value = ScalarValue::LargeUtf8(Some("value".to_owned()));
+        let expr_input = cast(col("largestr"), value.data_type()).eq(lit(value));
         let expected =
             col("largestr").eq(lit(ScalarValue::LargeUtf8(Some("value".to_owned()))));
         assert_eq!(optimize_test(expr_input, &schema), expected);
@@ -1391,31 +1359,6 @@ mod tests {
 
                 expect_cast(s1.clone(), s2.data_type(), expected_value);
             }
-        }
-    }
-    #[test]
-    fn test_try_cast_to_dictionary_type() {
-        fn dictionary_type(t: DataType) -> DataType {
-            DataType::Dictionary(Box::new(DataType::Int32), Box::new(t))
-        }
-        fn dictionary_value(value: ScalarValue) -> ScalarValue {
-            ScalarValue::Dictionary(Box::new(DataType::Int32), Box::new(value))
-        }
-        let scalars = vec![
-            ScalarValue::from("string"),
-            ScalarValue::LargeUtf8(Some("string".to_owned())),
-        ];
-        for s in &scalars {
-            expect_cast(
-                s.clone(),
-                dictionary_type(s.data_type()),
-                ExpectedCast::Value(dictionary_value(s.clone())),
-            );
-            expect_cast(
-                dictionary_value(s.clone()),
-                s.data_type(),
-                ExpectedCast::Value(s.clone()),
-            )
         }
     }
 }

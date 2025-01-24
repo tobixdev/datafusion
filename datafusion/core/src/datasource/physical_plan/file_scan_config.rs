@@ -19,8 +19,7 @@
 //! file sources.
 
 use std::{
-    borrow::Cow, collections::HashMap, fmt::Debug, marker::PhantomData, mem::size_of,
-    sync::Arc, vec,
+    collections::HashMap, fmt::Debug, marker::PhantomData, mem::size_of, sync::Arc, vec,
 };
 
 use super::{get_projected_output_ordering, statistics::MinMaxStatistics};
@@ -38,8 +37,6 @@ use datafusion_common::{
 };
 use datafusion_physical_expr::LexOrdering;
 
-use log::warn;
-
 /// Convert type to a type suitable for use as a [`ListingTable`]
 /// partition column. Returns `Dictionary(UInt16, val_type)`, which is
 /// a reasonable trade off between a reasonable number of partition
@@ -49,18 +46,9 @@ use log::warn;
 /// you MAY also choose not to dictionary-encode the data or to use a
 /// different dictionary type.
 ///
-/// Use [`wrap_partition_value_in_dict`] to wrap a [`ScalarValue`] in the same say.
-///
 /// [`ListingTable`]: crate::datasource::listing::ListingTable
 pub fn wrap_partition_type_in_dict(val_type: DataType) -> DataType {
     DataType::Dictionary(Box::new(DataType::UInt16), Box::new(val_type))
-}
-
-/// Convert a [`ScalarValue`] of partition columns to a type, as
-/// described in the documentation of [`wrap_partition_type_in_dict`],
-/// which can wrap the types.
-pub fn wrap_partition_value_in_dict(val: ScalarValue) -> ScalarValue {
-    ScalarValue::Dictionary(Box::new(DataType::UInt16), Box::new(val))
 }
 
 /// The base configurations to provide when creating a physical plan for
@@ -459,27 +447,16 @@ impl PartitionColumnProjector {
                         "Invalid partitioning found on disk".to_string(),
                     ))?;
 
-            let mut partition_value = Cow::Borrowed(p_value);
-
             // check if user forgot to dict-encode the partition value
             let field = self.projected_schema.field(sidx);
             let expected_data_type = field.data_type();
-            let actual_data_type = partition_value.data_type();
-            if let DataType::Dictionary(key_type, _) = expected_data_type {
-                if !matches!(actual_data_type, DataType::Dictionary(_, _)) {
-                    warn!("Partition value for column {} was not dictionary-encoded, applied auto-fix.", field.name());
-                    partition_value = Cow::Owned(ScalarValue::Dictionary(
-                        key_type.clone(),
-                        Box::new(partition_value.as_ref().clone()),
-                    ));
-                }
-            }
 
             cols.insert(
                 sidx,
                 create_output_array(
+                    expected_data_type,
                     &mut self.key_buffer_cache,
-                    partition_value.as_ref(),
+                    p_value,
                     file_batch.num_rows(),
                 )?,
             )
@@ -538,96 +515,96 @@ where
 
 fn create_dict_array<T>(
     buffer_gen: &mut ZeroBufferGenerator<T>,
-    dict_val: &ScalarValue,
+    val: &ScalarValue,
     len: usize,
-    data_type: DataType,
+    data_type: &DataType,
 ) -> Result<ArrayRef>
 where
     T: ArrowNativeType,
 {
-    let dict_vals = dict_val.to_array()?;
-
     let sliced_key_buffer = buffer_gen.get_buffer(len);
 
     // assemble pieces together
-    let mut builder = ArrayData::builder(data_type)
+    let builder = ArrayData::builder(data_type.clone())
         .len(len)
-        .add_buffer(sliced_key_buffer);
-    builder = builder.add_child_data(dict_vals.to_data());
+        .add_buffer(sliced_key_buffer)
+        .add_child_data(val.to_array()?.to_data());
+
     Ok(Arc::new(DictionaryArray::<UInt16Type>::from(
         builder.build().unwrap(),
     )))
 }
 
 fn create_output_array(
+    expected_data_type: &DataType,
     key_buffer_cache: &mut ZeroBufferGenerators,
     val: &ScalarValue,
     len: usize,
 ) -> Result<ArrayRef> {
-    if let ScalarValue::Dictionary(key_type, dict_val) = &val {
+    if let DataType::Dictionary(key_type, _) = expected_data_type {
         match key_type.as_ref() {
             DataType::Int8 => {
                 return create_dict_array(
                     &mut key_buffer_cache.gen_i8,
-                    dict_val,
+                    val,
                     len,
-                    val.data_type(),
+                    expected_data_type,
                 );
             }
             DataType::Int16 => {
                 return create_dict_array(
                     &mut key_buffer_cache.gen_i16,
-                    dict_val,
+                    val,
                     len,
-                    val.data_type(),
+                    expected_data_type,
                 );
             }
             DataType::Int32 => {
                 return create_dict_array(
                     &mut key_buffer_cache.gen_i32,
-                    dict_val,
+                    val,
                     len,
-                    val.data_type(),
+                    expected_data_type,
                 );
             }
             DataType::Int64 => {
                 return create_dict_array(
                     &mut key_buffer_cache.gen_i64,
-                    dict_val,
+                    val,
                     len,
-                    val.data_type(),
+                    expected_data_type,
                 );
             }
             DataType::UInt8 => {
                 return create_dict_array(
                     &mut key_buffer_cache.gen_u8,
-                    dict_val,
+                    val,
                     len,
-                    val.data_type(),
+                    expected_data_type,
                 );
             }
             DataType::UInt16 => {
                 return create_dict_array(
                     &mut key_buffer_cache.gen_u16,
-                    dict_val,
+                    val,
                     len,
-                    val.data_type(),
+                    expected_data_type,
                 );
             }
             DataType::UInt32 => {
                 return create_dict_array(
                     &mut key_buffer_cache.gen_u32,
-                    dict_val,
+                    val,
                     len,
-                    val.data_type(),
+                    expected_data_type,
                 );
             }
             DataType::UInt64 => {
                 return create_dict_array(
                     &mut key_buffer_cache.gen_u64,
-                    dict_val,
+                    val,
                     len,
-                    val.data_type(),
+                    expected_data_type,
                 );
             }
             _ => {}
@@ -799,9 +776,9 @@ mod tests {
                 // file_batch is ok here because we kept all the file cols in the projection
                 file_batch,
                 &[
-                    wrap_partition_value_in_dict(ScalarValue::from("2021")),
-                    wrap_partition_value_in_dict(ScalarValue::from("10")),
-                    wrap_partition_value_in_dict(ScalarValue::from("26")),
+                    ScalarValue::from("2021"),
+                    ScalarValue::from("10"),
+                    ScalarValue::from("26"),
                 ],
             )
             .expect("Projection of partition columns into record batch failed");
@@ -827,9 +804,9 @@ mod tests {
                 // file_batch is ok here because we kept all the file cols in the projection
                 file_batch,
                 &[
-                    wrap_partition_value_in_dict(ScalarValue::from("2021")),
-                    wrap_partition_value_in_dict(ScalarValue::from("10")),
-                    wrap_partition_value_in_dict(ScalarValue::from("27")),
+                    ScalarValue::from("2021"),
+                    ScalarValue::from("10"),
+                    ScalarValue::from("27"),
                 ],
             )
             .expect("Projection of partition columns into record batch failed");
@@ -857,9 +834,9 @@ mod tests {
                 // file_batch is ok here because we kept all the file cols in the projection
                 file_batch,
                 &[
-                    wrap_partition_value_in_dict(ScalarValue::from("2021")),
-                    wrap_partition_value_in_dict(ScalarValue::from("10")),
-                    wrap_partition_value_in_dict(ScalarValue::from("28")),
+                    ScalarValue::from("2021"),
+                    ScalarValue::from("10"),
+                    ScalarValue::from("28"),
                 ],
             )
             .expect("Projection of partition columns into record batch failed");

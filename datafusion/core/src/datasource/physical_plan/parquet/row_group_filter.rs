@@ -294,9 +294,6 @@ impl BloomFilterStatistics {
                 }
                 _ => true,
             },
-            ScalarValue::Dictionary(_, inner) => {
-                BloomFilterStatistics::check_scalar(sbbf, inner, parquet_type)
-            }
             _ => true,
         }
     }

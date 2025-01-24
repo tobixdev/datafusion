@@ -1689,7 +1689,7 @@ impl ScalarValue {
         scalars: impl IntoIterator<Item = ScalarValue>,
         data_type: &DataType,
     ) -> Result<ArrayRef> {
-        let mut scalars = scalars.into_iter().peekable();
+        let mut scalars = scalars.into_iter();
 
         /// Creates an array of $ARRAY_TY by unpacking values of
         /// SCALAR_TY for primitive types
@@ -1879,8 +1879,6 @@ impl ScalarValue {
             }
             DataType::Dictionary(key_type, value_type) => {
                 let values = Self::iter_to_array_of_type(scalars, value_type)?;
-                assert_eq!(values.data_type(), value_type.as_ref()); // TODO @tobixdev: can we remove that?
-
                 match key_type.as_ref() {
                     DataType::Int8 => dict_from_values::<Int8Type>(values)?,
                     DataType::Int16 => dict_from_values::<Int16Type>(values)?,
@@ -1927,7 +1925,7 @@ impl ScalarValue {
                 return _not_impl_err!(
                     "Unsupported creation of {:?} array from ScalarValue {:?}",
                     data_type,
-                    scalars.peek()
+                    scalars.next()
                 );
             }
         };
@@ -2798,9 +2796,8 @@ impl ScalarValue {
     /// Note you can use [`Option::flatten`] to check for non null logical
     /// strings.
     ///
-    /// For example, [`ScalarValue::Utf8`], [`ScalarValue::LargeUtf8`], and
-    /// [`ScalarValue::Dictionary`] with a logical string value and store
-    /// strings and can be accessed as `&str` using this method.
+    /// For example, [`ScalarValue::Utf8`] and [`ScalarValue::LargeUtf8`] store strings and can be
+    /// accessed as `&str` using this method.
     ///
     /// # Example: logical strings
     /// ```
@@ -3865,7 +3862,6 @@ impl ScalarType<i32> for Date32Type {
 
 #[cfg(test)]
 mod tests {
-
     use super::*;
     use crate::cast::{
         as_map_array, as_string_array, as_struct_array, as_uint32_array, as_uint64_array,
@@ -4866,16 +4862,10 @@ mod tests {
 
     #[test]
     fn scalar_iter_to_dictionary() {
-        fn make_val(v: Option<String>) -> ScalarValue {
-            let key_type = DataType::Int32;
-            let value = ScalarValue::Utf8(v);
-            ScalarValue::Dictionary(Box::new(key_type), Box::new(value))
-        }
-
         let scalars = [
-            make_val(Some("Foo".into())),
-            make_val(None),
-            make_val(Some("Bar".into())),
+            ScalarValue::Utf8(Some("Foo".into())),
+            ScalarValue::Utf8(None),
+            ScalarValue::Utf8(Some("Bar".into())),
         ];
 
         let array = ScalarValue::iter_to_array(scalars).unwrap();
@@ -5030,11 +5020,7 @@ mod tests {
         let data_type =
             DataType::Dictionary(Box::new(DataType::Int8), Box::new(DataType::Utf8));
         let data_type = &data_type;
-        let expected = ScalarValue::Dictionary(
-            Box::new(DataType::Int8),
-            Box::new(ScalarValue::Utf8(None)),
-        );
-        assert_eq!(expected, data_type.try_into().unwrap())
+        assert_eq!(ScalarValue::Utf8(None), data_type.try_into().unwrap())
     }
 
     #[test]
@@ -5187,12 +5173,7 @@ mod tests {
                     ),
                     scalars: $INPUT
                         .iter()
-                        .map(|v| {
-                            ScalarValue::Dictionary(
-                                Box::new($INDEX_TY::DATA_TYPE),
-                                Box::new(ScalarValue::Utf8(v.map(|v| v.to_string()))),
-                            )
-                        })
+                        .map(|v| ScalarValue::Utf8(v.map(|v| v.to_string())))
                         .collect(),
                 }
             }};
@@ -7173,13 +7154,12 @@ mod tests {
     }
 
     #[test]
-    fn null_dictionary_scalar_produces_null_dictionary_array() {
-        let dictionary_scalar = ScalarValue::Dictionary(
-            Box::new(DataType::Int32),
-            Box::new(ScalarValue::Null),
-        );
-        assert!(dictionary_scalar.is_null());
-        let dictionary_array = dictionary_scalar.to_array().unwrap();
+    fn null_scalar_produces_null_dictionary_array() {
+        let dictionary_type =
+            DataType::Dictionary(Box::new(DataType::Int32), Box::new(DataType::Null));
+        let dictionary_array = ScalarValue::Null
+            .to_array_of_size_and_type(1, &dictionary_type)
+            .unwrap();
         assert!(dictionary_array.is_null(0));
     }
 }

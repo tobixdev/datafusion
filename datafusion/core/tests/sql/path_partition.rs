@@ -219,8 +219,8 @@ async fn parquet_distinct_partition_col() -> Result<()> {
 
     let s = ScalarValue::try_from_array(results[0].column(1), 0)?;
     assert!(
-        matches!(s.data_type(), DataType::Dictionary(_, v) if v.as_ref() == &DataType::Utf8),
-        "Expected month as Dict(_, Utf8) found {s:?}"
+        matches!(s.data_type(), DataType::Utf8),
+        "Expected month as Utf8 found {s:?}"
     );
     let month = s.try_as_str().flatten().unwrap();
 

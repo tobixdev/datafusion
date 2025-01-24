@@ -1549,10 +1549,7 @@ mod tests {
             Arc::new(schema),
             vec![Arc::new(a)],
             Operator::Plus,
-            ScalarValue::Dictionary(
-                Box::new(DataType::Int8),
-                Box::new(ScalarValue::Int32(Some(1))),
-            ),
+            ScalarValue::Int32(Some(1)),
             Arc::new(expected),
         )?;
 
@@ -1596,10 +1593,7 @@ mod tests {
             Arc::new(schema),
             vec![Arc::new(a)],
             Operator::Plus,
-            ScalarValue::Dictionary(
-                Box::new(DataType::Int8),
-                Box::new(ScalarValue::Decimal128(Some(1), 10, 0)),
-            ),
+            ScalarValue::Decimal128(Some(1), 10, 0),
             decimal_array,
         )?;
 
@@ -1768,10 +1762,7 @@ mod tests {
             Arc::new(schema),
             vec![Arc::new(a)],
             Operator::Minus,
-            ScalarValue::Dictionary(
-                Box::new(DataType::Int8),
-                Box::new(ScalarValue::Int32(Some(1))),
-            ),
+            ScalarValue::Int32(Some(1)),
             Arc::new(expected),
         )?;
 
@@ -1815,10 +1806,7 @@ mod tests {
             Arc::new(schema),
             vec![Arc::new(a)],
             Operator::Minus,
-            ScalarValue::Dictionary(
-                Box::new(DataType::Int8),
-                Box::new(ScalarValue::Decimal128(Some(1), 10, 0)),
-            ),
+            ScalarValue::Decimal128(Some(1), 10, 0),
             decimal_array,
         )?;
 
@@ -1980,10 +1968,7 @@ mod tests {
             Arc::new(schema),
             vec![Arc::new(a)],
             Operator::Multiply,
-            ScalarValue::Dictionary(
-                Box::new(DataType::Int8),
-                Box::new(ScalarValue::Int32(Some(2))),
-            ),
+            ScalarValue::Int32(Some(2)),
             Arc::new(expected),
         )?;
 
@@ -2021,10 +2006,7 @@ mod tests {
             Arc::new(schema),
             vec![Arc::new(a)],
             Operator::Multiply,
-            ScalarValue::Dictionary(
-                Box::new(DataType::Int8),
-                Box::new(ScalarValue::Decimal128(Some(2), 10, 0)),
-            ),
+            ScalarValue::Decimal128(Some(2), 10, 0),
             decimal_array,
         )?;
 
@@ -2198,10 +2180,7 @@ mod tests {
             Arc::new(schema),
             vec![Arc::new(a)],
             Operator::Divide,
-            ScalarValue::Dictionary(
-                Box::new(DataType::Int8),
-                Box::new(ScalarValue::Int32(Some(2))),
-            ),
+            ScalarValue::Int32(Some(2)),
             Arc::new(expected),
         )?;
 
@@ -2239,10 +2218,7 @@ mod tests {
             Arc::new(schema),
             vec![Arc::new(a)],
             Operator::Divide,
-            ScalarValue::Dictionary(
-                Box::new(DataType::Int8),
-                Box::new(ScalarValue::Decimal128(Some(2), 10, 0)),
-            ),
+            ScalarValue::Decimal128(Some(2), 10, 0),
             decimal_array,
         )?;
 
@@ -2406,10 +2382,7 @@ mod tests {
             Arc::new(schema),
             vec![Arc::new(a)],
             Operator::Modulo,
-            ScalarValue::Dictionary(
-                Box::new(DataType::Int8),
-                Box::new(ScalarValue::Int32(Some(2))),
-            ),
+            ScalarValue::Int32(Some(2)),
             Arc::new(expected),
         )?;
 
@@ -2447,10 +2420,7 @@ mod tests {
             Arc::new(schema),
             vec![Arc::new(a)],
             Operator::Modulo,
-            ScalarValue::Dictionary(
-                Box::new(DataType::Int8),
-                Box::new(ScalarValue::Decimal128(Some(2), 10, 0)),
-            ),
+            ScalarValue::Decimal128(Some(2), 10, 0),
             decimal_array,
         )?;
 
@@ -3253,10 +3223,7 @@ mod tests {
     fn comparison_dict_decimal_scalar_expr_test() -> Result<()> {
         // scalar of decimal compare with dictionary decimal array
         let value_i128 = 123;
-        let decimal_scalar = ScalarValue::Dictionary(
-            Box::new(DataType::Int8),
-            Box::new(ScalarValue::Decimal128(Some(value_i128), 25, 3)),
-        );
+        let decimal_scalar = ScalarValue::Decimal128(Some(value_i128), 25, 3);
         let schema = Arc::new(Schema::new(vec![Field::new(
             "a",
             DataType::Dictionary(
