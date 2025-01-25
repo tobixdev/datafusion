@@ -18,10 +18,12 @@
 use core::fmt;
 use std::hash::Hash;
 
+use arrow::compute::CastOptions;
 use arrow::{
     array::{Array, ArrayRef},
     datatypes::DataType,
 };
+use datafusion_common::format::DEFAULT_CAST_OPTIONS;
 use datafusion_common::{exec_err, DataFusionError, Result, ScalarValue};
 
 /// Represents a physical scalar value obtained after evaluating an expression.
@@ -144,7 +146,18 @@ impl Scalar {
     }
 
     pub fn cast_to(&self, data_type: &DataType) -> Result<Self> {
-        Ok(Self::from(self.value.cast_to(data_type)?))
+        Ok(self.cast_to_with_options(data_type, &DEFAULT_CAST_OPTIONS)?)
+    }
+
+    pub fn cast_to_with_options(
+        &self,
+        data_type: &DataType,
+        cast_options: &CastOptions<'_>,
+    ) -> Result<Self> {
+        Ok(Self {
+            value: self.value.cast_to_with_options(data_type, cast_options)?,
+            data_type: data_type.clone(),
+        })
     }
 
     #[inline]

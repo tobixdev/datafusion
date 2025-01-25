@@ -213,12 +213,8 @@ impl ColumnarValue {
             ColumnarValue::Array(array) => Ok(ColumnarValue::Array(
                 kernels::cast::cast_with_options(array, cast_type, &cast_options)?,
             )),
-            ColumnarValue::Scalar(scalar) => Ok(ColumnarValue::from(
-                // TODO(@notfilippo, logical vs physical): if `scalar.data_type` is *logically equivalent*
-                // to `cast_type` then skip the kernel cast and only change the `data_type` of the scalar.
-                scalar
-                    .value()
-                    .cast_to_with_options(cast_type, &cast_options)?,
+            ColumnarValue::Scalar(scalar) => Ok(ColumnarValue::Scalar(
+                scalar.cast_to_with_options(cast_type, &cast_options)?,
             )),
         }
     }
