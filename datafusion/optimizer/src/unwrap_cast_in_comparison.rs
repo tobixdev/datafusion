@@ -477,9 +477,9 @@ fn try_cast_string_literal(
 ) -> Option<ScalarValue> {
     let string_value = lit_value.try_as_str()?.map(|s| s.to_string());
     let scalar_value = match target_type {
-        DataType::Utf8 => ScalarValue::Utf8(string_value),
-        DataType::LargeUtf8 => ScalarValue::LargeUtf8(string_value),
-        DataType::Utf8View => ScalarValue::Utf8View(string_value),
+        DataType::Utf8 | DataType::LargeUtf8 | DataType::Utf8View => {
+            ScalarValue::Utf8(string_value)
+        }
         _ => return None,
     };
     Some(scalar_value)
@@ -632,11 +632,11 @@ mod tests {
         // cast(largestr as Dictionary<Int32, LargeUtf8>) = arrow_cast('value', 'Dictionary<Int32, LargeUtf8>') => str1 = LargeUtf8('value1')
         let dict = ScalarValue::Dictionary(
             Box::new(DataType::Int32),
-            Box::new(ScalarValue::LargeUtf8(Some("value".to_owned()))),
+            Box::new(ScalarValue::Utf8(Some("value".to_owned()))),
         );
         let expr_input = cast(col("largestr"), dict.data_type()).eq(lit(dict));
         let expected =
-            col("largestr").eq(lit(ScalarValue::LargeUtf8(Some("value".to_owned()))));
+            col("largestr").eq(lit(ScalarValue::Utf8(Some("value".to_owned()))));
         assert_eq!(optimize_test(expr_input, &schema), expected);
     }
 
@@ -920,7 +920,7 @@ mod tests {
             ScalarValue::Decimal128(None, 3, 0),
             ScalarValue::Decimal128(None, 8, 2),
             ScalarValue::Utf8(None),
-            ScalarValue::LargeUtf8(None),
+            ScalarValue::Utf8(None),
         ];
 
         for s1 in &scalars {
@@ -1378,7 +1378,7 @@ mod tests {
     fn test_try_cast_to_string_type() {
         let scalars = vec![
             ScalarValue::from("string"),
-            ScalarValue::LargeUtf8(Some("string".to_owned())),
+            ScalarValue::Utf8(Some("string".to_owned())),
         ];
 
         for s1 in &scalars {
@@ -1399,7 +1399,7 @@ mod tests {
         }
         let scalars = vec![
             ScalarValue::from("string"),
-            ScalarValue::LargeUtf8(Some("string".to_owned())),
+            ScalarValue::Utf8(Some("string".to_owned())),
         ];
         for s in &scalars {
             expect_cast(

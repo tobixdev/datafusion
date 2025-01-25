@@ -78,7 +78,7 @@ pub fn create_string_array_and_characters(
     match string_array_type {
         StringArrayType::Utf8View => (
             Arc::new(string_iter.collect::<StringViewArray>()),
-            ScalarValue::Utf8View(Some(characters.to_string())),
+            ScalarValue::Utf8(Some(characters.to_string())),
         ),
         StringArrayType::Utf8 => (
             Arc::new(string_iter.collect::<StringArray>()),
@@ -86,7 +86,7 @@ pub fn create_string_array_and_characters(
         ),
         StringArrayType::LargeUtf8 => (
             Arc::new(string_iter.collect::<LargeStringArray>()),
-            ScalarValue::LargeUtf8(Some(characters.to_string())),
+            ScalarValue::Utf8(Some(characters.to_string())),
         ),
     }
 }

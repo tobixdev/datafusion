@@ -1734,19 +1734,18 @@ impl<S: SimplifyInfo> TreeNodeRewriter for Simplifier<'_, S> {
 }
 
 fn as_string_scalar(expr: &Expr) -> Option<(DataType, &Option<String>)> {
+    // TODO @tobixdev: Check str len
     match expr {
         Expr::Literal(ScalarValue::Utf8(s)) => Some((DataType::Utf8, s)),
-        Expr::Literal(ScalarValue::LargeUtf8(s)) => Some((DataType::LargeUtf8, s)),
-        Expr::Literal(ScalarValue::Utf8View(s)) => Some((DataType::Utf8View, s)),
         _ => None,
     }
 }
 
 fn to_string_scalar(data_type: DataType, value: Option<String>) -> Expr {
     match data_type {
-        DataType::Utf8 => Expr::Literal(ScalarValue::Utf8(value)),
-        DataType::LargeUtf8 => Expr::Literal(ScalarValue::LargeUtf8(value)),
-        DataType::Utf8View => Expr::Literal(ScalarValue::Utf8View(value)),
+        DataType::Utf8 | DataType::LargeUtf8 | DataType::Utf8View => {
+            Expr::Literal(ScalarValue::Utf8(value))
+        }
         _ => unreachable!(),
     }
 }

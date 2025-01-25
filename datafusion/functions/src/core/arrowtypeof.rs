@@ -76,14 +76,14 @@ impl ScalarUDFImpl for ArrowTypeOfFunc {
     }
 
     fn invoke_with_args(&self, args: ScalarFunctionArgs) -> Result<ColumnarValue> {
-        if args.args_expr.len() != 1 {
+        if args.args_data_types.len() != 1 {
             return exec_err!(
                 "arrow_typeof function requires 1 arguments, got {}",
-                args.args_expr.len()
+                args.args_data_types.len()
             );
         }
 
-        let input_data_type = args.args_expr[0].data_type(args.batch_schema)?;
+        let input_data_type = &args.args_data_types[0];
         Ok(ColumnarValue::Scalar(ScalarValue::from(format!(
             "{input_data_type}"
         ))))

@@ -169,7 +169,7 @@ impl Accumulator for StringAggAccumulator {
     }
 
     fn evaluate(&mut self) -> Result<ScalarValue> {
-        Ok(ScalarValue::LargeUtf8(self.values.clone()))
+        Ok(ScalarValue::Utf8(self.values.clone()))
     }
 
     fn size(&self) -> usize {

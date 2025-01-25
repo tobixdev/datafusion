@@ -2750,8 +2750,8 @@ fn from_substrait_literal(
         Some(LiteralType::Date(d)) => ScalarValue::Date32(Some(*d)),
         Some(LiteralType::String(s)) => match lit.type_variation_reference {
             DEFAULT_CONTAINER_TYPE_VARIATION_REF => ScalarValue::Utf8(Some(s.clone())),
-            LARGE_CONTAINER_TYPE_VARIATION_REF => ScalarValue::LargeUtf8(Some(s.clone())),
-            VIEW_CONTAINER_TYPE_VARIATION_REF => ScalarValue::Utf8View(Some(s.clone())),
+            LARGE_CONTAINER_TYPE_VARIATION_REF => ScalarValue::Utf8(Some(s.clone())),
+            VIEW_CONTAINER_TYPE_VARIATION_REF => ScalarValue::Utf8(Some(s.clone())),
             others => {
                 return substrait_err!("Unknown type variation reference {others}");
             }

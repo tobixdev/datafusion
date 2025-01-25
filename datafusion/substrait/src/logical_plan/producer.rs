@@ -2307,14 +2307,6 @@ fn to_substrait_literal(
             LiteralType::String(s.clone()),
             DEFAULT_CONTAINER_TYPE_VARIATION_REF,
         ),
-        ScalarValue::LargeUtf8(Some(s)) => (
-            LiteralType::String(s.clone()),
-            LARGE_CONTAINER_TYPE_VARIATION_REF,
-        ),
-        ScalarValue::Utf8View(Some(s)) => (
-            LiteralType::String(s.clone()),
-            VIEW_CONTAINER_TYPE_VARIATION_REF,
-        ),
         ScalarValue::Decimal128(v, p, s) if v.is_some() => (
             LiteralType::Decimal(Decimal {
                 value: v.unwrap().to_le_bytes().to_vec(),

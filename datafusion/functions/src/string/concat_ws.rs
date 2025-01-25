@@ -207,9 +207,7 @@ impl ScalarUDFImpl for ConcatWsFunc {
         let mut columns = Vec::with_capacity(args.len() - 1);
         for arg in &args[1..] {
             match arg {
-                ColumnarValue::Scalar(ScalarValue::Utf8(maybe_value))
-                | ColumnarValue::Scalar(ScalarValue::LargeUtf8(maybe_value))
-                | ColumnarValue::Scalar(ScalarValue::Utf8View(maybe_value)) => {
+                ColumnarValue::Scalar(ScalarValue::Utf8(maybe_value)) => {
                     if let Some(s) = maybe_value {
                         data_size += s.len() * len;
                         columns.push(ColumnarValueRef::Scalar(s.as_bytes()));
@@ -310,11 +308,7 @@ impl ScalarUDFImpl for ConcatWsFunc {
 
 fn simplify_concat_ws(delimiter: &Expr, args: &[Expr]) -> Result<ExprSimplifyResult> {
     match delimiter {
-        Expr::Literal(
-            ScalarValue::Utf8(delimiter)
-            | ScalarValue::LargeUtf8(delimiter)
-            | ScalarValue::Utf8View(delimiter),
-        ) => {
+        Expr::Literal(ScalarValue::Utf8(delimiter)) => {
             match delimiter {
                 // when the delimiter is an empty string,
                 // we can use `concat` to replace `concat_ws`
@@ -338,8 +332,8 @@ fn simplify_concat_ws(delimiter: &Expr, args: &[Expr]) -> Result<ExprSimplifyRes
                     for arg in args {
                         match arg {
                             // filter out null args
-                            Expr::Literal(ScalarValue::Utf8(None) | ScalarValue::LargeUtf8(None) | ScalarValue::Utf8View(None)) => {}
-                            Expr::Literal(ScalarValue::Utf8(Some(v)) | ScalarValue::LargeUtf8(Some(v)) | ScalarValue::Utf8View(Some(v))) => {
+                            Expr::Literal(ScalarValue::Utf8(None)) => {}
+                            Expr::Literal(ScalarValue::Utf8(Some(v))) => {
                                 match contiguous_scalar {
                                     None => contiguous_scalar = Some(v.to_string()),
                                     Some(mut pre) => {

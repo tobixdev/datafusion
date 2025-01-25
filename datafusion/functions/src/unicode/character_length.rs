@@ -196,7 +196,7 @@ mod tests {
 
             test_function!(
                 CharacterLengthFunc::new(),
-                vec![ColumnarValue::Scalar(ScalarValue::LargeUtf8($INPUT))],
+                vec![ColumnarValue::Scalar(ScalarValue::Utf8($INPUT))],
                 $EXPECTED,
                 i64,
                 Int64,
@@ -205,7 +205,7 @@ mod tests {
 
             test_function!(
                 CharacterLengthFunc::new(),
-                vec![ColumnarValue::Scalar(ScalarValue::Utf8View($INPUT))],
+                vec![ColumnarValue::Scalar(ScalarValue::Utf8($INPUT))],
                 $EXPECTED,
                 i32,
                 Int32,

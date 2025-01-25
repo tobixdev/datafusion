@@ -275,7 +275,7 @@ mod tests {
             .invoke_batch(
                 &[
                     ColumnarValue::Scalar(ScalarValue::Utf8(Some("2024".to_string()))),
-                    ColumnarValue::Scalar(ScalarValue::LargeUtf8(Some("1".to_string()))),
+                    ColumnarValue::Scalar(ScalarValue::Utf8(Some("1".to_string()))),
                     ColumnarValue::Scalar(ScalarValue::Utf8(Some("14".to_string()))),
                 ],
                 1,

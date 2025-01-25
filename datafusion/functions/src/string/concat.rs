@@ -149,14 +149,8 @@ impl ScalarUDFImpl for ConcatFunc {
             }
 
             return match return_datatype {
-                DataType::Utf8View => {
-                    Ok(ColumnarValue::Scalar(ScalarValue::Utf8View(Some(result))))
-                }
-                DataType::Utf8 => {
+                DataType::Utf8 | DataType::Utf8View | DataType::LargeUtf8 => {
                     Ok(ColumnarValue::Scalar(ScalarValue::Utf8(Some(result))))
-                }
-                DataType::LargeUtf8 => {
-                    Ok(ColumnarValue::Scalar(ScalarValue::LargeUtf8(Some(result))))
                 }
                 other => {
                     plan_err!("Concat function does not support datatype of {other}")
@@ -171,9 +165,7 @@ impl ScalarUDFImpl for ConcatFunc {
 
         for arg in args {
             match arg {
-                ColumnarValue::Scalar(ScalarValue::Utf8(maybe_value))
-                | ColumnarValue::Scalar(ScalarValue::LargeUtf8(maybe_value))
-                | ColumnarValue::Scalar(ScalarValue::Utf8View(maybe_value)) => {
+                ColumnarValue::Scalar(ScalarValue::Utf8(maybe_value)) => {
                     if let Some(s) = maybe_value {
                         data_size += s.len() * len;
                         columns.push(ColumnarValueRef::Scalar(s.as_bytes()));
@@ -307,20 +299,11 @@ pub fn simplify_concat(args: Vec<Expr>) -> Result<ExprSimplifyResult> {
     for arg in args.clone() {
         match arg {
             Expr::Literal(ScalarValue::Utf8(None)) => {}
-            Expr::Literal(ScalarValue::LargeUtf8(None)) => {
-            }
-            Expr::Literal(ScalarValue::Utf8View(None)) => { }
 
             // filter out `null` args
             // All literals have been converted to Utf8 or LargeUtf8 in type_coercion.
             // Concatenate it with the `contiguous_scalar`.
             Expr::Literal(ScalarValue::Utf8(Some(v))) => {
-                contiguous_scalar += &v;
-            }
-            Expr::Literal(ScalarValue::LargeUtf8(Some(v))) => {
-                contiguous_scalar += &v;
-            }
-            Expr::Literal(ScalarValue::Utf8View(Some(v))) => {
                 contiguous_scalar += &v;
             }
 
@@ -336,8 +319,6 @@ pub fn simplify_concat(args: Vec<Expr>) -> Result<ExprSimplifyResult> {
                 if !contiguous_scalar.is_empty() {
                     match return_type {
                         DataType::Utf8 => new_args.push(lit(contiguous_scalar)),
-                        DataType::LargeUtf8 => new_args.push(lit(ScalarValue::LargeUtf8(Some(contiguous_scalar)))),
-                        DataType::Utf8View => new_args.push(lit(ScalarValue::Utf8View(Some(contiguous_scalar)))),
                         _ => unreachable!(),
                     }
                     contiguous_scalar = "".to_string();
@@ -348,16 +329,7 @@ pub fn simplify_concat(args: Vec<Expr>) -> Result<ExprSimplifyResult> {
     }
 
     if !contiguous_scalar.is_empty() {
-        match return_type {
-            DataType::Utf8 => new_args.push(lit(contiguous_scalar)),
-            DataType::LargeUtf8 => {
-                new_args.push(lit(ScalarValue::LargeUtf8(Some(contiguous_scalar))))
-            }
-            DataType::Utf8View => {
-                new_args.push(lit(ScalarValue::Utf8View(Some(contiguous_scalar))))
-            }
-            _ => unreachable!(),
-        }
+        new_args.push(lit(contiguous_scalar))
     }
 
     if !args.eq(&new_args) {
@@ -418,8 +390,8 @@ mod tests {
             ConcatFunc::new(),
             vec![
                 ColumnarValue::Scalar(ScalarValue::from("aa")),
-                ColumnarValue::Scalar(ScalarValue::Utf8View(None)),
-                ColumnarValue::Scalar(ScalarValue::LargeUtf8(None)),
+                ColumnarValue::Scalar(ScalarValue::Utf8(None)),
+                ColumnarValue::Scalar(ScalarValue::Utf8(None)),
                 ColumnarValue::Scalar(ScalarValue::from("cc")),
             ],
             Ok(Some("aacc")),
@@ -431,7 +403,7 @@ mod tests {
             ConcatFunc::new(),
             vec![
                 ColumnarValue::Scalar(ScalarValue::from("aa")),
-                ColumnarValue::Scalar(ScalarValue::LargeUtf8(None)),
+                ColumnarValue::Scalar(ScalarValue::Utf8(None)),
                 ColumnarValue::Scalar(ScalarValue::from("cc")),
             ],
             Ok(Some("aacc")),
@@ -442,7 +414,7 @@ mod tests {
         test_function!(
             ConcatFunc::new(),
             vec![
-                ColumnarValue::Scalar(ScalarValue::Utf8View(Some("aa".to_string()))),
+                ColumnarValue::Scalar(ScalarValue::Utf8(Some("aa".to_string()))),
                 ColumnarValue::Scalar(ScalarValue::Utf8(Some("cc".to_string()))),
             ],
             Ok(Some("aacc")),
@@ -464,7 +436,7 @@ mod tests {
             None,
             Some("z"),
         ])));
-        let c3 = ColumnarValue::Scalar(ScalarValue::Utf8View(Some(",".to_string())));
+        let c3 = ColumnarValue::Scalar(ScalarValue::Utf8(Some(",".to_string())));
         let c4 = ColumnarValue::Array(Arc::new(StringViewArray::from(vec![
             Some("a"),
             None,

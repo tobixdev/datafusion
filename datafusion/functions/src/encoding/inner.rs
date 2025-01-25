@@ -246,26 +246,17 @@ fn encode_process(value: &ColumnarValue, encoding: Encoding) -> Result<ColumnarV
                 "Unsupported data type {other:?} for function encode({encoding})"
             ),
         },
-        ColumnarValue::Scalar(scalar) => {
-            match scalar {
-                ScalarValue::Utf8(a) => {
-                    Ok(encoding.encode_scalar(a.as_ref().map(|s: &String| s.as_bytes())))
-                }
-                ScalarValue::LargeUtf8(a) => Ok(encoding
-                    .encode_large_scalar(a.as_ref().map(|s: &String| s.as_bytes()))),
-                ScalarValue::Utf8View(a) => {
-                    Ok(encoding.encode_scalar(a.as_ref().map(|s: &String| s.as_bytes())))
-                }
-                ScalarValue::Binary(a) => Ok(
-                    encoding.encode_scalar(a.as_ref().map(|v: &Vec<u8>| v.as_slice()))
-                ),
-                ScalarValue::LargeBinary(a) => Ok(encoding
-                    .encode_large_scalar(a.as_ref().map(|v: &Vec<u8>| v.as_slice()))),
-                other => exec_err!(
-                    "Unsupported data type {other:?} for function encode({encoding})"
-                ),
+        ColumnarValue::Scalar(scalar) => match scalar {
+            ScalarValue::Utf8(a) => {
+                Ok(encoding.encode_scalar(a.as_ref().map(|s: &String| s.as_bytes())))
             }
-        }
+            ScalarValue::Binary(a) | ScalarValue::LargeBinary(a) => {
+                Ok(encoding.encode_scalar(a.as_ref().map(|v: &Vec<u8>| v.as_slice())))
+            }
+            other => exec_err!(
+                "Unsupported data type {other:?} for function encode({encoding})"
+            ),
+        },
     }
 }
 
@@ -281,26 +272,20 @@ fn decode_process(value: &ColumnarValue, encoding: Encoding) -> Result<ColumnarV
                 "Unsupported data type {other:?} for function decode({encoding})"
             ),
         },
-        ColumnarValue::Scalar(scalar) => {
-            match scalar {
-                ScalarValue::Utf8(a) => {
-                    encoding.decode_scalar(a.as_ref().map(|s: &String| s.as_bytes()))
-                }
-                ScalarValue::LargeUtf8(a) => encoding
-                    .decode_large_scalar(a.as_ref().map(|s: &String| s.as_bytes())),
-                ScalarValue::Utf8View(a) => {
-                    encoding.decode_scalar(a.as_ref().map(|s: &String| s.as_bytes()))
-                }
-                ScalarValue::Binary(a) => {
-                    encoding.decode_scalar(a.as_ref().map(|v: &Vec<u8>| v.as_slice()))
-                }
-                ScalarValue::LargeBinary(a) => encoding
-                    .decode_large_scalar(a.as_ref().map(|v: &Vec<u8>| v.as_slice())),
-                other => exec_err!(
-                    "Unsupported data type {other:?} for function decode({encoding})"
-                ),
+        ColumnarValue::Scalar(scalar) => match scalar {
+            ScalarValue::Utf8(a) => {
+                encoding.decode_scalar(a.as_ref().map(|s: &String| s.as_bytes()))
             }
-        }
+            ScalarValue::Binary(a) => {
+                encoding.decode_scalar(a.as_ref().map(|v: &Vec<u8>| v.as_slice()))
+            }
+            ScalarValue::LargeBinary(a) => {
+                encoding.decode_large_scalar(a.as_ref().map(|v: &Vec<u8>| v.as_slice()))
+            }
+            other => exec_err!(
+                "Unsupported data type {other:?} for function decode({encoding})"
+            ),
+        },
     }
 }
 
@@ -373,20 +358,11 @@ where
 
 impl Encoding {
     fn encode_scalar(self, value: Option<&[u8]>) -> ColumnarValue {
-        ColumnarValue::Scalar(match self {
+        ColumnarValue::from(match self {
             Self::Base64 => ScalarValue::Utf8(
                 value.map(|v| general_purpose::STANDARD_NO_PAD.encode(v)),
             ),
             Self::Hex => ScalarValue::Utf8(value.map(hex::encode)),
-        })
-    }
-
-    fn encode_large_scalar(self, value: Option<&[u8]>) -> ColumnarValue {
-        ColumnarValue::Scalar(match self {
-            Self::Base64 => ScalarValue::LargeUtf8(
-                value.map(|v| general_purpose::STANDARD_NO_PAD.encode(v)),
-            ),
-            Self::Hex => ScalarValue::LargeUtf8(value.map(hex::encode)),
         })
     }
 
@@ -417,7 +393,7 @@ impl Encoding {
     fn decode_scalar(self, value: Option<&[u8]>) -> Result<ColumnarValue> {
         let value = match value {
             Some(value) => value,
-            None => return Ok(ColumnarValue::Scalar(ScalarValue::Binary(None))),
+            None => return Ok(ColumnarValue::from(ScalarValue::Binary(None))),
         };
 
         let out = match self {
@@ -439,13 +415,13 @@ impl Encoding {
             })?,
         };
 
-        Ok(ColumnarValue::Scalar(ScalarValue::Binary(Some(out))))
+        Ok(ColumnarValue::from(ScalarValue::Binary(Some(out))))
     }
 
     fn decode_large_scalar(self, value: Option<&[u8]>) -> Result<ColumnarValue> {
         let value = match value {
             Some(value) => value,
-            None => return Ok(ColumnarValue::Scalar(ScalarValue::LargeBinary(None))),
+            None => return Ok(ColumnarValue::from(ScalarValue::LargeBinary(None))),
         };
 
         let out = match self {
@@ -467,7 +443,7 @@ impl Encoding {
             })?,
         };
 
-        Ok(ColumnarValue::Scalar(ScalarValue::LargeBinary(Some(out))))
+        Ok(ColumnarValue::from(ScalarValue::LargeBinary(Some(out))))
     }
 
     fn decode_binary_array<T>(self, value: &dyn Array) -> Result<ColumnarValue>

@@ -1088,14 +1088,6 @@ impl Unparser<'_> {
                 Ok(ast::Expr::Value(SingleQuotedString(str.to_string())))
             }
             ScalarValue::Utf8(None) => Ok(ast::Expr::Value(ast::Value::Null)),
-            ScalarValue::Utf8View(Some(str)) => {
-                Ok(ast::Expr::Value(SingleQuotedString(str.to_string())))
-            }
-            ScalarValue::Utf8View(None) => Ok(ast::Expr::Value(ast::Value::Null)),
-            ScalarValue::LargeUtf8(Some(str)) => {
-                Ok(ast::Expr::Value(SingleQuotedString(str.to_string())))
-            }
-            ScalarValue::LargeUtf8(None) => Ok(ast::Expr::Value(ast::Value::Null)),
             ScalarValue::Binary(Some(_)) => not_impl_err!("Unsupported scalar: {v:?}"),
             ScalarValue::Binary(None) => Ok(ast::Expr::Value(ast::Value::Null)),
             ScalarValue::BinaryView(Some(_)) => {
@@ -2696,7 +2688,7 @@ mod tests {
 
         assert_eq!(actual, expected);
 
-        let expr = col("a").eq(lit(ScalarValue::Utf8View(Some("hello".to_string()))));
+        let expr = col("a").eq(lit(ScalarValue::Utf8(Some("hello".to_string()))));
         let ast = unparser.expr_to_sql(&expr)?;
 
         let actual = format!("{}", ast);

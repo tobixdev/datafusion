@@ -306,7 +306,7 @@ mod tests {
             test_function!(
                 LPadFunc::new(),
                 vec![
-                    ColumnarValue::Scalar(ScalarValue::LargeUtf8($INPUT)),
+                    ColumnarValue::Scalar(ScalarValue::Utf8($INPUT)),
                     ColumnarValue::Scalar($LENGTH)
                 ],
                 $EXPECTED,
@@ -318,7 +318,7 @@ mod tests {
             test_function!(
                 LPadFunc::new(),
                 vec![
-                    ColumnarValue::Scalar(ScalarValue::Utf8View($INPUT)),
+                    ColumnarValue::Scalar(ScalarValue::Utf8($INPUT)),
                     ColumnarValue::Scalar($LENGTH)
                 ],
                 $EXPECTED,
@@ -348,7 +348,7 @@ mod tests {
                 vec![
                     ColumnarValue::Scalar(ScalarValue::Utf8($INPUT)),
                     ColumnarValue::Scalar($LENGTH),
-                    ColumnarValue::Scalar(ScalarValue::LargeUtf8($REPLACE))
+                    ColumnarValue::Scalar(ScalarValue::Utf8($REPLACE))
                 ],
                 $EXPECTED,
                 &str,
@@ -361,7 +361,7 @@ mod tests {
                 vec![
                     ColumnarValue::Scalar(ScalarValue::Utf8($INPUT)),
                     ColumnarValue::Scalar($LENGTH),
-                    ColumnarValue::Scalar(ScalarValue::Utf8View($REPLACE))
+                    ColumnarValue::Scalar(ScalarValue::Utf8($REPLACE))
                 ],
                 $EXPECTED,
                 &str,
@@ -373,7 +373,7 @@ mod tests {
             test_function!(
                 LPadFunc::new(),
                 vec![
-                    ColumnarValue::Scalar(ScalarValue::LargeUtf8($INPUT)),
+                    ColumnarValue::Scalar(ScalarValue::Utf8($INPUT)),
                     ColumnarValue::Scalar($LENGTH),
                     ColumnarValue::Scalar(ScalarValue::Utf8($REPLACE))
                 ],
@@ -386,9 +386,9 @@ mod tests {
             test_function!(
                 LPadFunc::new(),
                 vec![
-                    ColumnarValue::Scalar(ScalarValue::LargeUtf8($INPUT)),
+                    ColumnarValue::Scalar(ScalarValue::Utf8($INPUT)),
                     ColumnarValue::Scalar($LENGTH),
-                    ColumnarValue::Scalar(ScalarValue::LargeUtf8($REPLACE))
+                    ColumnarValue::Scalar(ScalarValue::Utf8($REPLACE))
                 ],
                 $EXPECTED,
                 &str,
@@ -399,9 +399,9 @@ mod tests {
             test_function!(
                 LPadFunc::new(),
                 vec![
-                    ColumnarValue::Scalar(ScalarValue::LargeUtf8($INPUT)),
+                    ColumnarValue::Scalar(ScalarValue::Utf8($INPUT)),
                     ColumnarValue::Scalar($LENGTH),
-                    ColumnarValue::Scalar(ScalarValue::Utf8View($REPLACE))
+                    ColumnarValue::Scalar(ScalarValue::Utf8($REPLACE))
                 ],
                 $EXPECTED,
                 &str,
@@ -413,7 +413,7 @@ mod tests {
             test_function!(
                 LPadFunc::new(),
                 vec![
-                    ColumnarValue::Scalar(ScalarValue::Utf8View($INPUT)),
+                    ColumnarValue::Scalar(ScalarValue::Utf8($INPUT)),
                     ColumnarValue::Scalar($LENGTH),
                     ColumnarValue::Scalar(ScalarValue::Utf8($REPLACE))
                 ],
@@ -426,9 +426,9 @@ mod tests {
             test_function!(
                 LPadFunc::new(),
                 vec![
-                    ColumnarValue::Scalar(ScalarValue::Utf8View($INPUT)),
+                    ColumnarValue::Scalar(ScalarValue::Utf8($INPUT)),
                     ColumnarValue::Scalar($LENGTH),
-                    ColumnarValue::Scalar(ScalarValue::LargeUtf8($REPLACE))
+                    ColumnarValue::Scalar(ScalarValue::Utf8($REPLACE))
                 ],
                 $EXPECTED,
                 &str,
@@ -439,9 +439,9 @@ mod tests {
             test_function!(
                 LPadFunc::new(),
                 vec![
-                    ColumnarValue::Scalar(ScalarValue::Utf8View($INPUT)),
+                    ColumnarValue::Scalar(ScalarValue::Utf8($INPUT)),
                     ColumnarValue::Scalar($LENGTH),
-                    ColumnarValue::Scalar(ScalarValue::Utf8View($REPLACE))
+                    ColumnarValue::Scalar(ScalarValue::Utf8($REPLACE))
                 ],
                 $EXPECTED,
                 &str,

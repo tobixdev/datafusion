@@ -366,9 +366,7 @@ pub fn digest_process(
             ),
         },
         ColumnarValue::Scalar(scalar) => match scalar {
-            ScalarValue::Utf8View(a)
-            | ScalarValue::Utf8(a)
-            | ScalarValue::LargeUtf8(a) => {
+            ScalarValue::Utf8(a) => {
                 Ok(digest_algorithm
                     .digest_scalar(a.as_ref().map(|s: &String| s.as_bytes())))
             }

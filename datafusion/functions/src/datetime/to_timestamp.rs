@@ -1108,9 +1108,9 @@ mod tests {
             // test LargeUTF8
             let string_array = [
                 ColumnarValue::Array(Arc::new(data.clone()) as ArrayRef),
-                ColumnarValue::Scalar(ScalarValue::LargeUtf8(Some("%s".to_string()))),
-                ColumnarValue::Scalar(ScalarValue::LargeUtf8(Some("%c".to_string()))),
-                ColumnarValue::Scalar(ScalarValue::LargeUtf8(Some("%+".to_string()))),
+                ColumnarValue::Scalar(ScalarValue::Utf8(Some("%s".to_string()))),
+                ColumnarValue::Scalar(ScalarValue::Utf8(Some("%c".to_string()))),
+                ColumnarValue::Scalar(ScalarValue::Utf8(Some("%+".to_string()))),
             ];
             let parsed_timestamps = func(&string_array)
                 .expect("that to_timestamp with format args parsed values without error");

@@ -166,11 +166,9 @@ mod tests {
         test_function!(
             ReplaceFunc::new(),
             vec![
-                ColumnarValue::Scalar(ScalarValue::LargeUtf8(Some(String::from(
-                    "aabbb"
-                )))),
-                ColumnarValue::Scalar(ScalarValue::LargeUtf8(Some(String::from("bbb")))),
-                ColumnarValue::Scalar(ScalarValue::LargeUtf8(Some(String::from("cc")))),
+                ColumnarValue::Scalar(ScalarValue::Utf8(Some(String::from("aabbb")))),
+                ColumnarValue::Scalar(ScalarValue::Utf8(Some(String::from("bbb")))),
+                ColumnarValue::Scalar(ScalarValue::Utf8(Some(String::from("cc")))),
             ],
             Ok(Some("aacc")),
             &str,
@@ -181,11 +179,9 @@ mod tests {
         test_function!(
             ReplaceFunc::new(),
             vec![
-                ColumnarValue::Scalar(ScalarValue::Utf8View(Some(String::from(
-                    "aabbbcw"
-                )))),
-                ColumnarValue::Scalar(ScalarValue::Utf8View(Some(String::from("bb")))),
-                ColumnarValue::Scalar(ScalarValue::Utf8View(Some(String::from("cc")))),
+                ColumnarValue::Scalar(ScalarValue::Utf8(Some(String::from("aabbbcw")))),
+                ColumnarValue::Scalar(ScalarValue::Utf8(Some(String::from("bb")))),
+                ColumnarValue::Scalar(ScalarValue::Utf8(Some(String::from("cc")))),
             ],
             Ok(Some("aaccbcw")),
             &str,

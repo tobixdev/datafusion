@@ -526,7 +526,7 @@ mod tests {
         test_function!(
             SubstrFunc::new(),
             vec![
-                ColumnarValue::Scalar(ScalarValue::Utf8View(None)),
+                ColumnarValue::Scalar(ScalarValue::Utf8(None)),
                 ColumnarValue::Scalar(ScalarValue::from(1i64)),
             ],
             Ok(None),
@@ -537,9 +537,7 @@ mod tests {
         test_function!(
             SubstrFunc::new(),
             vec![
-                ColumnarValue::Scalar(ScalarValue::Utf8View(Some(String::from(
-                    "alphabet"
-                )))),
+                ColumnarValue::Scalar(ScalarValue::Utf8(Some(String::from("alphabet")))),
                 ColumnarValue::Scalar(ScalarValue::from(0i64)),
             ],
             Ok(Some("alphabet")),
@@ -550,7 +548,7 @@ mod tests {
         test_function!(
             SubstrFunc::new(),
             vec![
-                ColumnarValue::Scalar(ScalarValue::Utf8View(Some(String::from(
+                ColumnarValue::Scalar(ScalarValue::Utf8(Some(String::from(
                     "this és longer than 12B"
                 )))),
                 ColumnarValue::Scalar(ScalarValue::from(5i64)),
@@ -564,7 +562,7 @@ mod tests {
         test_function!(
             SubstrFunc::new(),
             vec![
-                ColumnarValue::Scalar(ScalarValue::Utf8View(Some(String::from(
+                ColumnarValue::Scalar(ScalarValue::Utf8(Some(String::from(
                     "this is longer than 12B"
                 )))),
                 ColumnarValue::Scalar(ScalarValue::from(5i64)),
@@ -577,9 +575,7 @@ mod tests {
         test_function!(
             SubstrFunc::new(),
             vec![
-                ColumnarValue::Scalar(ScalarValue::Utf8View(Some(String::from(
-                    "joséésoj"
-                )))),
+                ColumnarValue::Scalar(ScalarValue::Utf8(Some(String::from("joséésoj")))),
                 ColumnarValue::Scalar(ScalarValue::from(5i64)),
             ],
             Ok(Some("ésoj")),
@@ -590,9 +586,7 @@ mod tests {
         test_function!(
             SubstrFunc::new(),
             vec![
-                ColumnarValue::Scalar(ScalarValue::Utf8View(Some(String::from(
-                    "alphabet"
-                )))),
+                ColumnarValue::Scalar(ScalarValue::Utf8(Some(String::from("alphabet")))),
                 ColumnarValue::Scalar(ScalarValue::from(3i64)),
                 ColumnarValue::Scalar(ScalarValue::from(2i64)),
             ],
@@ -604,9 +598,7 @@ mod tests {
         test_function!(
             SubstrFunc::new(),
             vec![
-                ColumnarValue::Scalar(ScalarValue::Utf8View(Some(String::from(
-                    "alphabet"
-                )))),
+                ColumnarValue::Scalar(ScalarValue::Utf8(Some(String::from("alphabet")))),
                 ColumnarValue::Scalar(ScalarValue::from(3i64)),
                 ColumnarValue::Scalar(ScalarValue::from(20i64)),
             ],

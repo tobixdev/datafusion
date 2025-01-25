@@ -676,7 +676,7 @@ fn test_simplify_concat() -> Result<()> {
         lit("hello "),
         null.clone(),
         lit("rust"),
-        lit(ScalarValue::Utf8View(Some("!".to_string()))),
+        lit(ScalarValue::Utf8(Some("!".to_string()))),
         col("c2"),
         lit(""),
         null,
@@ -685,7 +685,7 @@ fn test_simplify_concat() -> Result<()> {
     let expr_datatype = expr.get_type(schema.as_ref())?;
     let expected = concat(vec![
         col("c1"),
-        lit(ScalarValue::Utf8View(Some("hello rust!".to_string()))),
+        lit(ScalarValue::Utf8(Some("hello rust!".to_string()))),
         col("c2"),
         col("c5"),
     ]);

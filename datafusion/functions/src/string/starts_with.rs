@@ -116,16 +116,6 @@ impl ScalarUDFImpl for StartsWithFunc {
                     let like_pattern = format!("{}%", escaped_pattern);
                     Expr::Literal(ScalarValue::Utf8(Some(like_pattern)))
                 }
-                ScalarValue::LargeUtf8(Some(pattern)) => {
-                    let escaped_pattern = pattern.replace("%", "\\%");
-                    let like_pattern = format!("{}%", escaped_pattern);
-                    Expr::Literal(ScalarValue::LargeUtf8(Some(like_pattern)))
-                }
-                ScalarValue::Utf8View(Some(pattern)) => {
-                    let escaped_pattern = pattern.replace("%", "\\%");
-                    let like_pattern = format!("{}%", escaped_pattern);
-                    Expr::Literal(ScalarValue::Utf8View(Some(like_pattern)))
-                }
                 _ => return Ok(ExprSimplifyResult::Original(args)),
             };
 
@@ -175,18 +165,7 @@ mod tests {
                 ColumnarValue::Scalar(ScalarValue::Utf8(a.map(|s| s.to_string()))),
                 ColumnarValue::Scalar(ScalarValue::Utf8(b.map(|s| s.to_string()))),
             ];
-
-            let large_utf_8_args = vec![
-                ColumnarValue::Scalar(ScalarValue::LargeUtf8(a.map(|s| s.to_string()))),
-                ColumnarValue::Scalar(ScalarValue::LargeUtf8(b.map(|s| s.to_string()))),
-            ];
-
-            let utf_8_view_args = vec![
-                ColumnarValue::Scalar(ScalarValue::Utf8View(a.map(|s| s.to_string()))),
-                ColumnarValue::Scalar(ScalarValue::Utf8View(b.map(|s| s.to_string()))),
-            ];
-
-            vec![(utf_8_args, c), (large_utf_8_args, c), (utf_8_view_args, c)]
+            vec![(utf_8_args, c)]
         });
 
         for (args, expected) in test_cases {

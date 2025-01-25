@@ -21,7 +21,7 @@ use std::any::Any;
 
 use crate::utils::utf8_to_int_type;
 use datafusion_common::{exec_err, Result, ScalarValue};
-use datafusion_expr::{ColumnarValue, Documentation, Volatility};
+use datafusion_expr::{ColumnarValue, Documentation, ScalarFunctionArgs, Volatility};
 use datafusion_expr::{ScalarUDFImpl, Signature};
 use datafusion_macros::user_doc;
 
@@ -77,32 +77,28 @@ impl ScalarUDFImpl for OctetLengthFunc {
         utf8_to_int_type(&arg_types[0], "octet_length")
     }
 
-    fn invoke_batch(
-        &self,
-        args: &[ColumnarValue],
-        _number_rows: usize,
-    ) -> Result<ColumnarValue> {
-        if args.len() != 1 {
+    fn invoke_with_args(&self, args: ScalarFunctionArgs) -> Result<ColumnarValue> {
+        if args.args.len() != 1 {
             return exec_err!(
                 "octet_length function requires 1 argument, got {}",
-                args.len()
+                args.args.len()
             );
         }
 
-        match &args[0] {
+        match &args.args[0] {
             ColumnarValue::Array(v) => Ok(ColumnarValue::Array(length(v.as_ref())?)),
-            ColumnarValue::Scalar(v) => match v {
-                ScalarValue::Utf8(v) => Ok(ColumnarValue::Scalar(ScalarValue::Int32(
-                    v.as_ref().map(|x| x.len() as i32),
-                ))),
-                ScalarValue::LargeUtf8(v) => Ok(ColumnarValue::Scalar(
-                    ScalarValue::Int64(v.as_ref().map(|x| x.len() as i64)),
-                )),
-                ScalarValue::Utf8View(v) => Ok(ColumnarValue::Scalar(
-                    ScalarValue::Int32(v.as_ref().map(|x| x.len() as i32)),
-                )),
-                _ => unreachable!("OctetLengthFunc"),
-            },
+            ColumnarValue::Scalar(v) => {
+                let value = v.try_as_str().flatten();
+                Ok(ColumnarValue::Scalar(match &args.args_data_types[0] {
+                    DataType::Utf8 | DataType::Utf8View => {
+                        ScalarValue::Int32(value.map(|x| x.len() as i32))
+                    }
+                    DataType::LargeUtf8 => {
+                        ScalarValue::Int64(value.map(|x| x.len() as i64))
+                    }
+                    _ => unreachable!("OctetLengthFunc"),
+                }))
+            }
         }
     }
 
@@ -199,7 +195,7 @@ mod tests {
         );
         test_function!(
             OctetLengthFunc::new(),
-            vec![ColumnarValue::Scalar(ScalarValue::Utf8View(Some(
+            vec![ColumnarValue::Scalar(ScalarValue::Utf8(Some(
                 String::from("joséjoséjoséjosé")
             )))],
             Ok(Some(20)),
@@ -209,7 +205,7 @@ mod tests {
         );
         test_function!(
             OctetLengthFunc::new(),
-            vec![ColumnarValue::Scalar(ScalarValue::Utf8View(Some(
+            vec![ColumnarValue::Scalar(ScalarValue::Utf8(Some(
                 String::from("josé")
             )))],
             Ok(Some(5)),
@@ -219,7 +215,7 @@ mod tests {
         );
         test_function!(
             OctetLengthFunc::new(),
-            vec![ColumnarValue::Scalar(ScalarValue::Utf8View(Some(
+            vec![ColumnarValue::Scalar(ScalarValue::Utf8(Some(
                 String::from("")
             )))],
             Ok(Some(0)),

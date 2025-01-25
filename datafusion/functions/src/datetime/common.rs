@@ -277,12 +277,7 @@ where
                 let mut ret = None;
 
                 for (pos, v) in args.iter().enumerate().skip(1) {
-                    let ColumnarValue::Scalar(
-                        ScalarValue::Utf8View(x)
-                        | ScalarValue::LargeUtf8(x)
-                        | ScalarValue::Utf8(x),
-                    ) = v
-                    else {
+                    let ColumnarValue::Scalar(ScalarValue::Utf8(x)) = v else {
                         return exec_err!("Unsupported data type {v:?} for function {name}, arg # {pos}");
                     };
 

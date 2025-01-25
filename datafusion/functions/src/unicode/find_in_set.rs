@@ -111,16 +111,8 @@ impl ScalarUDFImpl for FindInSetFunc {
         match (string, str_list) {
             // both inputs are scalars
             (
-                ColumnarValue::Scalar(
-                    ScalarValue::Utf8View(string)
-                    | ScalarValue::Utf8(string)
-                    | ScalarValue::LargeUtf8(string),
-                ),
-                ColumnarValue::Scalar(
-                    ScalarValue::Utf8View(str_list)
-                    | ScalarValue::Utf8(str_list)
-                    | ScalarValue::LargeUtf8(str_list),
-                ),
+                ColumnarValue::Scalar(ScalarValue::Utf8(string)),
+                ColumnarValue::Scalar(ScalarValue::Utf8(str_list)),
             ) => {
                 let res = match (string, str_list) {
                     (Some(string), Some(str_list)) => {
@@ -139,11 +131,7 @@ impl ScalarUDFImpl for FindInSetFunc {
             // `string` is an array, `str_list` is scalar
             (
                 ColumnarValue::Array(str_array),
-                ColumnarValue::Scalar(
-                    ScalarValue::Utf8View(str_list_literal)
-                    | ScalarValue::Utf8(str_list_literal)
-                    | ScalarValue::LargeUtf8(str_list_literal),
-                ),
+                ColumnarValue::Scalar(ScalarValue::Utf8(str_list_literal)),
             ) => {
                 let result_array = match str_list_literal {
                     // find_in_set(column_a, null) = null
@@ -184,11 +172,7 @@ impl ScalarUDFImpl for FindInSetFunc {
 
             // `string` is scalar, `str_list` is an array
             (
-                ColumnarValue::Scalar(
-                    ScalarValue::Utf8View(string_literal)
-                    | ScalarValue::Utf8(string_literal)
-                    | ScalarValue::LargeUtf8(string_literal),
-                ),
+                ColumnarValue::Scalar(ScalarValue::Utf8(string_literal)),
                 ColumnarValue::Array(str_list_array),
             ) => {
                 let res = match string_literal {
@@ -375,10 +359,8 @@ mod tests {
         test_function!(
             FindInSetFunc::new(),
             vec![
-                ColumnarValue::Scalar(ScalarValue::Utf8View(Some(String::from("🔥")))),
-                ColumnarValue::Scalar(ScalarValue::Utf8View(Some(String::from(
-                    "a,Д,🔥"
-                )))),
+                ColumnarValue::Scalar(ScalarValue::Utf8(Some(String::from("🔥")))),
+                ColumnarValue::Scalar(ScalarValue::Utf8(Some(String::from("a,Д,🔥")))),
             ],
             Ok(Some(3)),
             i32,
@@ -388,8 +370,8 @@ mod tests {
         test_function!(
             FindInSetFunc::new(),
             vec![
-                ColumnarValue::Scalar(ScalarValue::Utf8View(Some(String::from("d")))),
-                ColumnarValue::Scalar(ScalarValue::Utf8View(Some(String::from("a,b,c")))),
+                ColumnarValue::Scalar(ScalarValue::Utf8(Some(String::from("d")))),
+                ColumnarValue::Scalar(ScalarValue::Utf8(Some(String::from("a,b,c")))),
             ],
             Ok(Some(0)),
             i32,
@@ -399,10 +381,10 @@ mod tests {
         test_function!(
             FindInSetFunc::new(),
             vec![
-                ColumnarValue::Scalar(ScalarValue::Utf8View(Some(String::from(
+                ColumnarValue::Scalar(ScalarValue::Utf8(Some(String::from(
                     "Apache Software Foundation"
                 )))),
-                ColumnarValue::Scalar(ScalarValue::Utf8View(Some(String::from(
+                ColumnarValue::Scalar(ScalarValue::Utf8(Some(String::from(
                     "Github,Apache Software Foundation,DataFusion"
                 )))),
             ],
@@ -436,8 +418,8 @@ mod tests {
         test_function!(
             FindInSetFunc::new(),
             vec![
-                ColumnarValue::Scalar(ScalarValue::Utf8View(Some(String::from("a")))),
-                ColumnarValue::Scalar(ScalarValue::Utf8View(None)),
+                ColumnarValue::Scalar(ScalarValue::Utf8(Some(String::from("a")))),
+                ColumnarValue::Scalar(ScalarValue::Utf8(None)),
             ],
             Ok(None),
             i32,
@@ -447,8 +429,8 @@ mod tests {
         test_function!(
             FindInSetFunc::new(),
             vec![
-                ColumnarValue::Scalar(ScalarValue::Utf8View(None)),
-                ColumnarValue::Scalar(ScalarValue::Utf8View(Some(String::from("a,b,c")))),
+                ColumnarValue::Scalar(ScalarValue::Utf8(None)),
+                ColumnarValue::Scalar(ScalarValue::Utf8(Some(String::from("a,b,c")))),
             ],
             Ok(None),
             i32,
@@ -511,9 +493,7 @@ mod tests {
     test_find_in_set!(
         test_find_in_set_with_scalar_args_2,
         vec![
-            ColumnarValue::Scalar(ScalarValue::Utf8View(Some(
-                "ApacheSoftware".to_string()
-            ))),
+            ColumnarValue::Scalar(ScalarValue::Utf8(Some("ApacheSoftware".to_string()))),
             ColumnarValue::Array(Arc::new(StringArray::from(vec![
                 "a,b,c",
                 "ApacheSoftware,Github,DataFusion",
@@ -526,14 +506,14 @@ mod tests {
         test_find_in_set_with_scalar_args_3,
         vec![
             ColumnarValue::Array(Arc::new(StringArray::from(vec![None::<&str>; 3]))),
-            ColumnarValue::Scalar(ScalarValue::Utf8View(Some("a,b,c".to_string()))),
+            ColumnarValue::Scalar(ScalarValue::Utf8(Some("a,b,c".to_string()))),
         ],
         Int32Array::from(vec![None::<i32>; 3])
     );
     test_find_in_set!(
         test_find_in_set_with_scalar_args_4,
         vec![
-            ColumnarValue::Scalar(ScalarValue::Utf8View(Some("a".to_string()))),
+            ColumnarValue::Scalar(ScalarValue::Utf8(Some("a".to_string()))),
             ColumnarValue::Array(Arc::new(StringArray::from(vec![None::<&str>; 3]))),
         ],
         Int32Array::from(vec![None::<i32>; 3])

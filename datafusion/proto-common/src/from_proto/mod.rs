@@ -370,8 +370,8 @@ impl TryFrom<&protobuf::ScalarValue> for ScalarValue {
         Ok(match value {
             Value::BoolValue(v) => Self::Boolean(Some(*v)),
             Value::Utf8Value(v) => Self::Utf8(Some(v.to_owned())),
-            Value::Utf8ViewValue(v) => Self::Utf8View(Some(v.to_owned())),
-            Value::LargeUtf8Value(v) => Self::LargeUtf8(Some(v.to_owned())),
+            Value::Utf8ViewValue(v) => Self::Utf8(Some(v.to_owned())),
+            Value::LargeUtf8Value(v) => Self::Utf8(Some(v.to_owned())),
             Value::Int8Value(v) => Self::Int8(Some(*v as i8)),
             Value::Int16Value(v) => Self::Int16(Some(*v as i16)),
             Value::Int32Value(v) => Self::Int32(Some(*v)),

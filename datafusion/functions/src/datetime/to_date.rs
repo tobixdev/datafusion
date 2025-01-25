@@ -198,8 +198,6 @@ mod tests {
 
         for tc in &test_cases {
             test_scalar(ScalarValue::Utf8(Some(tc.date_str.to_string())), tc);
-            test_scalar(ScalarValue::LargeUtf8(Some(tc.date_str.to_string())), tc);
-            test_scalar(ScalarValue::Utf8View(Some(tc.date_str.to_string())), tc);
 
             test_array::<GenericStringArray<i32>>(tc);
             test_array::<GenericStringArray<i64>>(tc);
@@ -304,14 +302,6 @@ mod tests {
 
         for tc in &test_cases {
             test_scalar(ScalarValue::Utf8(Some(tc.formatted_date.to_string())), tc);
-            test_scalar(
-                ScalarValue::LargeUtf8(Some(tc.formatted_date.to_string())),
-                tc,
-            );
-            test_scalar(
-                ScalarValue::Utf8View(Some(tc.formatted_date.to_string())),
-                tc,
-            );
 
             test_array::<GenericStringArray<i32>>(tc);
             test_array::<GenericStringArray<i64>>(tc);

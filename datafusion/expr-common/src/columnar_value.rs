@@ -107,6 +107,7 @@ impl From<ScalarValue> for ColumnarValue {
 
 impl ColumnarValue {
     pub fn data_type(&self) -> DataType {
+        // TODO @tobixdev: remove
         match self {
             ColumnarValue::Array(array_value) => array_value.data_type().clone(),
             ColumnarValue::Scalar(scalar_value) => scalar_value.data_type(),

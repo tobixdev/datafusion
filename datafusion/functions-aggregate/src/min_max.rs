@@ -365,11 +365,11 @@ impl AggregateUDFImpl for Max {
 
 // Statically-typed version of min/max(array) -> ScalarValue for string types
 macro_rules! typed_min_max_batch_string {
-    ($VALUES:expr, $ARRAYTYPE:ident, $SCALAR:ident, $OP:ident) => {{
+    ($VALUES:expr, $ARRAYTYPE:ident, $OP:ident) => {{
         let array = downcast_value!($VALUES, $ARRAYTYPE);
         let value = compute::$OP(array);
         let value = value.and_then(|e| Some(e.to_string()));
-        ScalarValue::$SCALAR(value)
+        ScalarValue::Utf8(value)
     }};
 }
 // Statically-typed version of min/max(array) -> ScalarValue for binary types.
@@ -528,18 +528,13 @@ macro_rules! min_max_batch {
 fn min_batch(values: &ArrayRef) -> Result<ScalarValue> {
     Ok(match values.data_type() {
         DataType::Utf8 => {
-            typed_min_max_batch_string!(values, StringArray, Utf8, min_string)
+            typed_min_max_batch_string!(values, StringArray, min_string)
         }
         DataType::LargeUtf8 => {
-            typed_min_max_batch_string!(values, LargeStringArray, LargeUtf8, min_string)
+            typed_min_max_batch_string!(values, LargeStringArray, min_string)
         }
         DataType::Utf8View => {
-            typed_min_max_batch_string!(
-                values,
-                StringViewArray,
-                Utf8View,
-                min_string_view
-            )
+            typed_min_max_batch_string!(values, StringViewArray, min_string_view)
         }
         DataType::Boolean => {
             typed_min_max_batch!(values, BooleanArray, Boolean, min_boolean)
@@ -571,18 +566,13 @@ fn min_batch(values: &ArrayRef) -> Result<ScalarValue> {
 fn max_batch(values: &ArrayRef) -> Result<ScalarValue> {
     Ok(match values.data_type() {
         DataType::Utf8 => {
-            typed_min_max_batch_string!(values, StringArray, Utf8, max_string)
+            typed_min_max_batch_string!(values, StringArray, max_string)
         }
         DataType::LargeUtf8 => {
-            typed_min_max_batch_string!(values, LargeStringArray, LargeUtf8, max_string)
+            typed_min_max_batch_string!(values, LargeStringArray, max_string)
         }
         DataType::Utf8View => {
-            typed_min_max_batch_string!(
-                values,
-                StringViewArray,
-                Utf8View,
-                max_string_view
-            )
+            typed_min_max_batch_string!(values, StringViewArray, max_string_view)
         }
         DataType::Boolean => {
             typed_min_max_batch!(values, BooleanArray, Boolean, max_boolean)
@@ -740,12 +730,6 @@ macro_rules! min_max {
             }
             (ScalarValue::Utf8(lhs), ScalarValue::Utf8(rhs)) => {
                 typed_min_max_string!(lhs, rhs, Utf8, $OP)
-            }
-            (ScalarValue::LargeUtf8(lhs), ScalarValue::LargeUtf8(rhs)) => {
-                typed_min_max_string!(lhs, rhs, LargeUtf8, $OP)
-            }
-            (ScalarValue::Utf8View(lhs), ScalarValue::Utf8View(rhs)) => {
-                typed_min_max_string!(lhs, rhs, Utf8View, $OP)
             }
             (ScalarValue::Binary(lhs), ScalarValue::Binary(rhs)) => {
                 typed_min_max_string!(lhs, rhs, Binary, $OP)

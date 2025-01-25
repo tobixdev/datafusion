@@ -168,7 +168,7 @@ mod tests {
 
             test_function!(
                 ReverseFunc::new(),
-                vec![ColumnarValue::Scalar(ScalarValue::LargeUtf8($INPUT))],
+                vec![ColumnarValue::Scalar(ScalarValue::Utf8($INPUT))],
                 $EXPECTED,
                 &str,
                 LargeUtf8,
@@ -177,7 +177,7 @@ mod tests {
 
             test_function!(
                 ReverseFunc::new(),
-                vec![ColumnarValue::Scalar(ScalarValue::Utf8View($INPUT))],
+                vec![ColumnarValue::Scalar(ScalarValue::Utf8($INPUT))],
                 $EXPECTED,
                 &str,
                 Utf8,

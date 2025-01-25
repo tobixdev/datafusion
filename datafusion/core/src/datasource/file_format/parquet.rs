@@ -1690,11 +1690,7 @@ mod tests {
         let schema = format.infer_schema(&state, &store, &files).await.unwrap();
 
         let null_i64 = ScalarValue::Int64(None);
-        let null_utf8 = if force_views {
-            ScalarValue::Utf8View(None)
-        } else {
-            Utf8(None)
-        };
+        let null_utf8 = Utf8(None);
 
         // Fetch statistics for first file
         let pq_meta = fetch_parquet_metadata(store.as_ref(), &files[0], None).await?;
@@ -1703,11 +1699,7 @@ mod tests {
         // column c1
         let c1_stats = &stats.column_statistics[0];
         assert_eq!(c1_stats.null_count, Precision::Exact(1));
-        let expected_type = if force_views {
-            ScalarValue::Utf8View
-        } else {
-            Utf8
-        };
+        let expected_type = Utf8;
         assert_eq!(
             c1_stats.max_value,
             Precision::Exact(expected_type(Some("bar".to_string())))

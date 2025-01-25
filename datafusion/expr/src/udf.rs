@@ -23,7 +23,7 @@ use crate::sort_properties::{ExprProperties, SortProperties};
 use crate::{
     ColumnarValue, Documentation, Expr, ScalarFunctionImplementation, Signature,
 };
-use arrow::datatypes::{DataType, SchemaRef};
+use arrow::datatypes::DataType;
 use datafusion_common::{not_impl_err, ExprSchema, Result, ScalarValue};
 use datafusion_expr_common::interval_arithmetic::Interval;
 use std::any::Any;
@@ -31,7 +31,6 @@ use std::cmp::Ordering;
 use std::fmt::Debug;
 use std::hash::{DefaultHasher, Hash, Hasher};
 use std::sync::Arc;
-use datafusion_physical_expr_common::physical_expr::PhysicalExpr;
 
 /// Logical representation of a Scalar User Defined Function.
 ///
@@ -345,10 +344,8 @@ where
 pub struct ScalarFunctionArgs<'a> {
     /// The evaluated arguments to the function
     pub args: Vec<ColumnarValue>,
-    /// The physical expressions of the function
-    pub args_expr: &'a [Arc<dyn PhysicalExpr>],
-    /// The input schema
-    pub batch_schema: &'a SchemaRef,
+    /// The physical types of the evaluated arguments
+    pub args_data_types: Vec<DataType>, // TODO @tobixdev: Combine them into (ColumnarValue, DataType)
     /// The number of rows in record batch being evaluated
     pub number_rows: usize,
     /// The return type of the scalar function returned (from `return_type` or `return_type_from_exprs`)

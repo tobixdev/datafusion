@@ -224,10 +224,6 @@ pub enum ScalarValue {
     UInt64(Option<u64>),
     /// utf-8 encoded string.
     Utf8(Option<String>),
-    /// utf-8 encoded string but from view types.
-    Utf8View(Option<String>),
-    /// utf-8 encoded string representing a LargeString's arrow type.
-    LargeUtf8(Option<String>),
     /// binary
     Binary(Option<Vec<u8>>),
     /// binary but from view types.
@@ -354,10 +350,6 @@ impl PartialEq for ScalarValue {
             (UInt64(_), _) => false,
             (Utf8(v1), Utf8(v2)) => v1.eq(v2),
             (Utf8(_), _) => false,
-            (Utf8View(v1), Utf8View(v2)) => v1.eq(v2),
-            (Utf8View(_), _) => false,
-            (LargeUtf8(v1), LargeUtf8(v2)) => v1.eq(v2),
-            (LargeUtf8(_), _) => false,
             (Binary(v1), Binary(v2)) => v1.eq(v2),
             (Binary(_), _) => false,
             (BinaryView(v1), BinaryView(v2)) => v1.eq(v2),
@@ -483,10 +475,6 @@ impl PartialOrd for ScalarValue {
             (UInt64(_), _) => None,
             (Utf8(v1), Utf8(v2)) => v1.partial_cmp(v2),
             (Utf8(_), _) => None,
-            (LargeUtf8(v1), LargeUtf8(v2)) => v1.partial_cmp(v2),
-            (LargeUtf8(_), _) => None,
-            (Utf8View(v1), Utf8View(v2)) => v1.partial_cmp(v2),
-            (Utf8View(_), _) => None,
             (Binary(v1), Binary(v2)) => v1.partial_cmp(v2),
             (Binary(_), _) => None,
             (BinaryView(v1), BinaryView(v2)) => v1.partial_cmp(v2),
@@ -716,7 +704,7 @@ impl Hash for ScalarValue {
             UInt16(v) => v.hash(state),
             UInt32(v) => v.hash(state),
             UInt64(v) => v.hash(state),
-            Utf8(v) | LargeUtf8(v) | Utf8View(v) => v.hash(state),
+            Utf8(v) => v.hash(state),
             Binary(v) | FixedSizeBinary(_, v) | LargeBinary(v) | BinaryView(v) => {
                 v.hash(state)
             }
@@ -976,11 +964,6 @@ impl ScalarValue {
     /// Returns a [`ScalarValue::Utf8`] representing `val`
     pub fn new_utf8(val: impl Into<String>) -> Self {
         ScalarValue::from(val.into())
-    }
-
-    /// Returns a [`ScalarValue::Utf8View`] representing `val`
-    pub fn new_utf8view(val: impl Into<String>) -> Self {
-        ScalarValue::Utf8View(Some(val.into()))
     }
 
     /// Returns a [`ScalarValue::IntervalYearMonth`] representing
@@ -1302,8 +1285,6 @@ impl ScalarValue {
             ScalarValue::Float32(_) => DataType::Float32,
             ScalarValue::Float64(_) => DataType::Float64,
             ScalarValue::Utf8(_) => DataType::Utf8,
-            ScalarValue::LargeUtf8(_) => DataType::LargeUtf8,
-            ScalarValue::Utf8View(_) => DataType::Utf8View,
             ScalarValue::Binary(_) => DataType::Binary,
             ScalarValue::BinaryView(_) => DataType::BinaryView,
             ScalarValue::FixedSizeBinary(sz, _) => DataType::FixedSizeBinary(*sz),
@@ -1563,9 +1544,7 @@ impl ScalarValue {
             ScalarValue::UInt16(v) => v.is_none(),
             ScalarValue::UInt32(v) => v.is_none(),
             ScalarValue::UInt64(v) => v.is_none(),
-            ScalarValue::Utf8(v)
-            | ScalarValue::Utf8View(v)
-            | ScalarValue::LargeUtf8(v) => v.is_none(),
+            ScalarValue::Utf8(v) => v.is_none(),
             ScalarValue::Binary(v)
             | ScalarValue::BinaryView(v)
             | ScalarValue::FixedSizeBinary(_, v)
@@ -1815,9 +1794,9 @@ impl ScalarValue {
             DataType::UInt16 => build_array_primitive!(UInt16Array, UInt16),
             DataType::UInt32 => build_array_primitive!(UInt32Array, UInt32),
             DataType::UInt64 => build_array_primitive!(UInt64Array, UInt64),
-            DataType::Utf8View => build_array_string!(StringViewArray, Utf8View),
+            DataType::Utf8View => build_array_string!(StringViewArray, Utf8),
             DataType::Utf8 => build_array_string!(StringArray, Utf8),
-            DataType::LargeUtf8 => build_array_string!(LargeStringArray, LargeUtf8),
+            DataType::LargeUtf8 => build_array_string!(LargeStringArray, Utf8),
             DataType::BinaryView => build_array_string!(BinaryViewArray, BinaryView),
             DataType::Binary => build_array_string!(BinaryArray, Binary),
             DataType::LargeBinary => build_array_string!(LargeBinaryArray, LargeBinary),
@@ -2296,18 +2275,6 @@ impl ScalarValue {
                 }
                 None => new_null_array(&DataType::Utf8, size),
             },
-            ScalarValue::Utf8View(e) => match e {
-                Some(value) => {
-                    Arc::new(StringViewArray::from_iter_values(repeat(value).take(size)))
-                }
-                None => new_null_array(&DataType::Utf8View, size),
-            },
-            ScalarValue::LargeUtf8(e) => match e {
-                Some(value) => {
-                    Arc::new(LargeStringArray::from_iter_values(repeat(value).take(size)))
-                }
-                None => new_null_array(&DataType::LargeUtf8, size),
-            },
             ScalarValue::Binary(e) => match e {
                 Some(value) => Arc::new(
                     repeat(Some(value.as_slice()))
@@ -2687,10 +2654,8 @@ impl ScalarValue {
                 typed_cast!(array, index, BinaryViewArray, BinaryView)?
             }
             DataType::Utf8 => typed_cast!(array, index, StringArray, Utf8)?,
-            DataType::LargeUtf8 => {
-                typed_cast!(array, index, LargeStringArray, LargeUtf8)?
-            }
-            DataType::Utf8View => typed_cast!(array, index, StringViewArray, Utf8View)?,
+            DataType::LargeUtf8 => typed_cast!(array, index, LargeStringArray, Utf8)?,
+            DataType::Utf8View => typed_cast!(array, index, StringViewArray, Utf8)?,
             DataType::List(field) => {
                 let list_array = array.as_list::<i32>();
                 let nested_array = list_array.value(index);
@@ -2857,9 +2822,8 @@ impl ScalarValue {
     /// Note you can use [`Option::flatten`] to check for non null logical
     /// strings.
     ///
-    /// For example, [`ScalarValue::Utf8`], [`ScalarValue::LargeUtf8`], and
-    /// [`ScalarValue::Dictionary`] with a logical string value and store
-    /// strings and can be accessed as `&str` using this method.
+    /// For example, [`ScalarValue::Utf8`] and [`ScalarValue::Dictionary`] with a logical string
+    /// value and store strings and can be accessed as `&str` using this method.
     ///
     /// # Example: logical strings
     /// ```
@@ -2885,8 +2849,6 @@ impl ScalarValue {
     pub fn try_as_str(&self) -> Option<Option<&str>> {
         let v = match self {
             ScalarValue::Utf8(v) => v,
-            ScalarValue::LargeUtf8(v) => v,
-            ScalarValue::Utf8View(v) => v,
             ScalarValue::Dictionary(_, v) => return v.try_as_str(),
             _ => return None,
         };
@@ -3036,15 +2998,16 @@ impl ScalarValue {
             ScalarValue::UInt64(val) => {
                 eq_array_primitive!(array, index, UInt64Array, val)?
             }
-            ScalarValue::Utf8(val) => {
-                eq_array_primitive!(array, index, StringArray, val)?
-            }
-            ScalarValue::Utf8View(val) => {
-                eq_array_primitive!(array, index, StringViewArray, val)?
-            }
-            ScalarValue::LargeUtf8(val) => {
-                eq_array_primitive!(array, index, LargeStringArray, val)?
-            }
+            ScalarValue::Utf8(val) => match array.data_type() {
+                DataType::Utf8 => eq_array_primitive!(array, index, StringArray, val)?,
+                DataType::Utf8View => {
+                    eq_array_primitive!(array, index, StringViewArray, val)?
+                }
+                DataType::LargeUtf8 => {
+                    eq_array_primitive!(array, index, LargeStringArray, val)?
+                }
+                _ => false,
+            },
             ScalarValue::Binary(val) => {
                 eq_array_primitive!(array, index, BinaryArray, val)?
             }
@@ -3193,9 +3156,7 @@ impl ScalarValue {
                 | ScalarValue::DurationMillisecond(_)
                 | ScalarValue::DurationMicrosecond(_)
                 | ScalarValue::DurationNanosecond(_) => 0,
-                ScalarValue::Utf8(s)
-                | ScalarValue::LargeUtf8(s)
-                | ScalarValue::Utf8View(s) => {
+                ScalarValue::Utf8(s) => {
                     s.as_ref().map(|s| s.capacity()).unwrap_or_default()
                 }
                 ScalarValue::TimestampSecond(_, s)
@@ -3474,8 +3435,8 @@ impl TryFrom<&DataType> for ScalarValue {
                 ScalarValue::Decimal256(None, *precision, *scale)
             }
             DataType::Utf8 => ScalarValue::Utf8(None),
-            DataType::LargeUtf8 => ScalarValue::LargeUtf8(None),
-            DataType::Utf8View => ScalarValue::Utf8View(None),
+            DataType::LargeUtf8 => ScalarValue::Utf8(None),
+            DataType::Utf8View => ScalarValue::Utf8(None),
             DataType::Binary => ScalarValue::Binary(None),
             DataType::BinaryView => ScalarValue::BinaryView(None),
             DataType::FixedSizeBinary(len) => ScalarValue::FixedSizeBinary(*len, None),
@@ -3605,9 +3566,7 @@ impl fmt::Display for ScalarValue {
             ScalarValue::TimestampMillisecond(e, _) => format_option!(f, e)?,
             ScalarValue::TimestampMicrosecond(e, _) => format_option!(f, e)?,
             ScalarValue::TimestampNanosecond(e, _) => format_option!(f, e)?,
-            ScalarValue::Utf8(e)
-            | ScalarValue::LargeUtf8(e)
-            | ScalarValue::Utf8View(e) => format_option!(f, e)?,
+            ScalarValue::Utf8(e) => format_option!(f, e)?,
             ScalarValue::Binary(e)
             | ScalarValue::FixedSizeBinary(_, e)
             | ScalarValue::LargeBinary(e)
@@ -3784,10 +3743,6 @@ impl fmt::Debug for ScalarValue {
             }
             ScalarValue::Utf8(None) => write!(f, "Utf8({self})"),
             ScalarValue::Utf8(Some(_)) => write!(f, "Utf8(\"{self}\")"),
-            ScalarValue::Utf8View(None) => write!(f, "Utf8View({self})"),
-            ScalarValue::Utf8View(Some(_)) => write!(f, "Utf8View(\"{self}\")"),
-            ScalarValue::LargeUtf8(None) => write!(f, "LargeUtf8({self})"),
-            ScalarValue::LargeUtf8(Some(_)) => write!(f, "LargeUtf8(\"{self}\")"),
             ScalarValue::Binary(None) => write!(f, "Binary({self})"),
             ScalarValue::Binary(Some(b)) => {
                 write!(f, "Binary(\"")?;
@@ -4920,7 +4875,7 @@ mod tests {
             vec![Some("foo"), None, Some("bar")]
         );
         check_scalar_iter_string!(
-            LargeUtf8,
+            Utf8,
             LargeStringArray,
             vec![Some("foo"), None, Some("bar")]
         );
@@ -5297,7 +5252,7 @@ mod tests {
             make_test_case!(u32_vals, UInt32Array, UInt32),
             make_test_case!(u64_vals, UInt64Array, UInt64),
             make_str_test_case!(str_vals, StringArray, Utf8),
-            make_str_test_case!(str_vals, LargeStringArray, LargeUtf8),
+            make_str_test_case!(str_vals, LargeStringArray, Utf8),
             make_binary_test_case!(str_vals, BinaryArray, Binary),
             make_binary_test_case!(str_vals, LargeBinaryArray, LargeBinary),
             make_test_case!(i32_vals, Date32Array, Date32),
