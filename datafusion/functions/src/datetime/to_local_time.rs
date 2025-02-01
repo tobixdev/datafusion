@@ -553,9 +553,11 @@ mod tests {
     }
 
     fn test_to_local_time_helper(input: ScalarValue, expected: ScalarValue) {
+        let input_data_type = input.data_type();
         let res = ToLocalTimeFunc::new()
             .invoke_with_args(ScalarFunctionArgs {
                 args: vec![ColumnarValue::Scalar(input)],
+                args_data_types: vec![input_data_type],
                 number_rows: 1,
                 return_type: &expected.data_type(),
             })

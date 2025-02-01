@@ -199,10 +199,13 @@ where
 
 #[cfg(test)]
 mod tests {
-    use arrow::array::{Array, Int32Array, Int64Array};
+    use arrow::array::{
+        Array, Int32Array, Int64Array, LargeStringArray, StringArray, StringViewArray,
+    };
     use arrow::datatypes::DataType::{Int32, Int64};
+    use std::sync::Arc;
 
-    use datafusion_common::{Result, ScalarValue};
+    use datafusion_common::Result;
     use datafusion_expr::{ColumnarValue, ScalarUDFImpl};
 
     use crate::unicode::strpos::StrposFunc;
@@ -213,8 +216,8 @@ mod tests {
             test_function!(
                 StrposFunc::new(),
                 vec![
-                    ColumnarValue::Scalar(ScalarValue::$t1(Some($lhs.to_owned()))),
-                    ColumnarValue::Scalar(ScalarValue::$t2(Some($rhs.to_owned()))),
+                    ColumnarValue::Array(Arc::new($t1::from(vec![$lhs]))),
+                    ColumnarValue::Array(Arc::new($t2::from(vec![$rhs]))),
                 ],
                 Ok(Some($result)),
                 $t3,
@@ -226,67 +229,67 @@ mod tests {
 
     #[test]
     fn test_strpos_functions() {
-        // Utf8 and Utf8 combinations
-        test_strpos!("alphabet", "ph" -> 3; Utf8 Utf8 i32 Int32 Int32Array);
-        test_strpos!("alphabet", "a" -> 1; Utf8 Utf8 i32 Int32 Int32Array);
-        test_strpos!("alphabet", "z" -> 0; Utf8 Utf8 i32 Int32 Int32Array);
-        test_strpos!("alphabet", "" -> 1; Utf8 Utf8 i32 Int32 Int32Array);
-        test_strpos!("", "a" -> 0; Utf8 Utf8 i32 Int32 Int32Array);
-        test_strpos!("", "" -> 1; Utf8 Utf8 i32 Int32 Int32Array);
-        test_strpos!("ДатаФусион数据融合📊🔥", "📊" -> 15; Utf8 Utf8 i32 Int32 Int32Array);
+        // StringArray and StringArray combinations
+        test_strpos!("alphabet", "ph" -> 3; StringArray StringArray i32 Int32 Int32Array);
+        test_strpos!("alphabet", "a" -> 1; StringArray StringArray i32 Int32 Int32Array);
+        test_strpos!("alphabet", "z" -> 0; StringArray StringArray i32 Int32 Int32Array);
+        test_strpos!("alphabet", "" -> 1; StringArray StringArray i32 Int32 Int32Array);
+        test_strpos!("", "a" -> 0; StringArray StringArray i32 Int32 Int32Array);
+        test_strpos!("", "" -> 1; StringArray StringArray i32 Int32 Int32Array);
+        test_strpos!("ДатаФусион数据融合📊🔥", "📊" -> 15; StringArray StringArray i32 Int32 Int32Array);
 
-        // LargeUtf8 and LargeUtf8 combinations
-        test_strpos!("alphabet", "ph" -> 3; LargeUtf8 LargeUtf8 i64 Int64 Int64Array);
-        test_strpos!("alphabet", "a" -> 1; LargeUtf8 LargeUtf8 i64 Int64 Int64Array);
-        test_strpos!("alphabet", "z" -> 0; LargeUtf8 LargeUtf8 i64 Int64 Int64Array);
-        test_strpos!("alphabet", "" -> 1; LargeUtf8 LargeUtf8 i64 Int64 Int64Array);
-        test_strpos!("", "a" -> 0; LargeUtf8 LargeUtf8 i64 Int64 Int64Array);
-        test_strpos!("", "" -> 1; LargeUtf8 LargeUtf8 i64 Int64 Int64Array);
-        test_strpos!("ДатаФусион数据融合📊🔥", "📊" -> 15; LargeUtf8 LargeUtf8 i64 Int64 Int64Array);
+        // LargeStringArray and LargeStringArray combinations
+        test_strpos!("alphabet", "ph" -> 3; LargeStringArray LargeStringArray i64 Int64 Int64Array);
+        test_strpos!("alphabet", "a" -> 1; LargeStringArray LargeStringArray i64 Int64 Int64Array);
+        test_strpos!("alphabet", "z" -> 0; LargeStringArray LargeStringArray i64 Int64 Int64Array);
+        test_strpos!("alphabet", "" -> 1; LargeStringArray LargeStringArray i64 Int64 Int64Array);
+        test_strpos!("", "a" -> 0; LargeStringArray LargeStringArray i64 Int64 Int64Array);
+        test_strpos!("", "" -> 1; LargeStringArray LargeStringArray i64 Int64 Int64Array);
+        test_strpos!("ДатаФусион数据融合📊🔥", "📊" -> 15; LargeStringArray LargeStringArray i64 Int64 Int64Array);
 
-        // Utf8 and LargeUtf8 combinations
-        test_strpos!("alphabet", "ph" -> 3; Utf8 LargeUtf8 i32 Int32 Int32Array);
-        test_strpos!("alphabet", "a" -> 1; Utf8 LargeUtf8 i32 Int32 Int32Array);
-        test_strpos!("alphabet", "z" -> 0; Utf8 LargeUtf8 i32 Int32 Int32Array);
-        test_strpos!("alphabet", "" -> 1; Utf8 LargeUtf8 i32 Int32 Int32Array);
-        test_strpos!("", "a" -> 0; Utf8 LargeUtf8 i32 Int32 Int32Array);
-        test_strpos!("", "" -> 1; Utf8 LargeUtf8 i32 Int32 Int32Array);
-        test_strpos!("ДатаФусион数据融合📊🔥", "📊" -> 15; Utf8 LargeUtf8 i32 Int32 Int32Array);
+        // StringArray and LargeStringArray combinations
+        test_strpos!("alphabet", "ph" -> 3; StringArray LargeStringArray i32 Int32 Int32Array);
+        test_strpos!("alphabet", "a" -> 1; StringArray LargeStringArray i32 Int32 Int32Array);
+        test_strpos!("alphabet", "z" -> 0; StringArray LargeStringArray i32 Int32 Int32Array);
+        test_strpos!("alphabet", "" -> 1; StringArray LargeStringArray i32 Int32 Int32Array);
+        test_strpos!("", "a" -> 0; StringArray LargeStringArray i32 Int32 Int32Array);
+        test_strpos!("", "" -> 1; StringArray LargeStringArray i32 Int32 Int32Array);
+        test_strpos!("ДатаФусион数据融合📊🔥", "📊" -> 15; StringArray LargeStringArray i32 Int32 Int32Array);
 
-        // LargeUtf8 and Utf8 combinations
-        test_strpos!("alphabet", "ph" -> 3; LargeUtf8 Utf8 i64 Int64 Int64Array);
-        test_strpos!("alphabet", "a" -> 1; LargeUtf8 Utf8 i64 Int64 Int64Array);
-        test_strpos!("alphabet", "z" -> 0; LargeUtf8 Utf8 i64 Int64 Int64Array);
-        test_strpos!("alphabet", "" -> 1; LargeUtf8 Utf8 i64 Int64 Int64Array);
-        test_strpos!("", "a" -> 0; LargeUtf8 Utf8 i64 Int64 Int64Array);
-        test_strpos!("", "" -> 1; LargeUtf8 Utf8 i64 Int64 Int64Array);
-        test_strpos!("ДатаФусион数据融合📊🔥", "📊" -> 15; LargeUtf8 Utf8 i64 Int64 Int64Array);
+        // LargeStringArray and StringArray combinations
+        test_strpos!("alphabet", "ph" -> 3; LargeStringArray StringArray i64 Int64 Int64Array);
+        test_strpos!("alphabet", "a" -> 1; LargeStringArray StringArray i64 Int64 Int64Array);
+        test_strpos!("alphabet", "z" -> 0; LargeStringArray StringArray i64 Int64 Int64Array);
+        test_strpos!("alphabet", "" -> 1; LargeStringArray StringArray i64 Int64 Int64Array);
+        test_strpos!("", "a" -> 0; LargeStringArray StringArray i64 Int64 Int64Array);
+        test_strpos!("", "" -> 1; LargeStringArray StringArray i64 Int64 Int64Array);
+        test_strpos!("ДатаФусион数据融合📊🔥", "📊" -> 15; LargeStringArray StringArray i64 Int64 Int64Array);
 
-        // Utf8View and Utf8View combinations
-        test_strpos!("alphabet", "ph" -> 3; Utf8View Utf8View i32 Int32 Int32Array);
-        test_strpos!("alphabet", "a" -> 1; Utf8View Utf8View i32 Int32 Int32Array);
-        test_strpos!("alphabet", "z" -> 0; Utf8View Utf8View i32 Int32 Int32Array);
-        test_strpos!("alphabet", "" -> 1; Utf8View Utf8View i32 Int32 Int32Array);
-        test_strpos!("", "a" -> 0; Utf8View Utf8View i32 Int32 Int32Array);
-        test_strpos!("", "" -> 1; Utf8View Utf8View i32 Int32 Int32Array);
-        test_strpos!("ДатаФусион数据融合📊🔥", "📊" -> 15; Utf8View Utf8View i32 Int32 Int32Array);
+        // StringViewArray and StringViewArray combinations
+        test_strpos!("alphabet", "ph" -> 3; StringViewArray StringViewArray i32 Int32 Int32Array);
+        test_strpos!("alphabet", "a" -> 1; StringViewArray StringViewArray i32 Int32 Int32Array);
+        test_strpos!("alphabet", "z" -> 0; StringViewArray StringViewArray i32 Int32 Int32Array);
+        test_strpos!("alphabet", "" -> 1; StringViewArray StringViewArray i32 Int32 Int32Array);
+        test_strpos!("", "a" -> 0; StringViewArray StringViewArray i32 Int32 Int32Array);
+        test_strpos!("", "" -> 1; StringViewArray StringViewArray i32 Int32 Int32Array);
+        test_strpos!("ДатаФусион数据融合📊🔥", "📊" -> 15; StringViewArray StringViewArray i32 Int32 Int32Array);
 
-        // Utf8View and Utf8 combinations
-        test_strpos!("alphabet", "ph" -> 3; Utf8View Utf8 i32 Int32 Int32Array);
-        test_strpos!("alphabet", "a" -> 1; Utf8View Utf8 i32 Int32 Int32Array);
-        test_strpos!("alphabet", "z" -> 0; Utf8View Utf8 i32 Int32 Int32Array);
-        test_strpos!("alphabet", "" -> 1; Utf8View Utf8 i32 Int32 Int32Array);
-        test_strpos!("", "a" -> 0; Utf8View Utf8 i32 Int32 Int32Array);
-        test_strpos!("", "" -> 1; Utf8View Utf8 i32 Int32 Int32Array);
-        test_strpos!("ДатаФусион数据融合📊🔥", "📊" -> 15; Utf8View Utf8 i32 Int32 Int32Array);
+        // StringViewArray and StringArray combinations
+        test_strpos!("alphabet", "ph" -> 3; StringViewArray StringArray i32 Int32 Int32Array);
+        test_strpos!("alphabet", "a" -> 1; StringViewArray StringArray i32 Int32 Int32Array);
+        test_strpos!("alphabet", "z" -> 0; StringViewArray StringArray i32 Int32 Int32Array);
+        test_strpos!("alphabet", "" -> 1; StringViewArray StringArray i32 Int32 Int32Array);
+        test_strpos!("", "a" -> 0; StringViewArray StringArray i32 Int32 Int32Array);
+        test_strpos!("", "" -> 1; StringViewArray StringArray i32 Int32 Int32Array);
+        test_strpos!("ДатаФусион数据融合📊🔥", "📊" -> 15; StringViewArray StringArray i32 Int32 Int32Array);
 
-        // Utf8View and LargeUtf8 combinations
-        test_strpos!("alphabet", "ph" -> 3; Utf8View LargeUtf8 i32 Int32 Int32Array);
-        test_strpos!("alphabet", "a" -> 1; Utf8View LargeUtf8 i32 Int32 Int32Array);
-        test_strpos!("alphabet", "z" -> 0; Utf8View LargeUtf8 i32 Int32 Int32Array);
-        test_strpos!("alphabet", "" -> 1; Utf8View LargeUtf8 i32 Int32 Int32Array);
-        test_strpos!("", "a" -> 0; Utf8View LargeUtf8 i32 Int32 Int32Array);
-        test_strpos!("", "" -> 1; Utf8View LargeUtf8 i32 Int32 Int32Array);
-        test_strpos!("ДатаФусион数据融合📊🔥", "📊" -> 15; Utf8View LargeUtf8 i32 Int32 Int32Array);
+        // StringViewArray and LargeStringArray combinations
+        test_strpos!("alphabet", "ph" -> 3; StringViewArray LargeStringArray i32 Int32 Int32Array);
+        test_strpos!("alphabet", "a" -> 1; StringViewArray LargeStringArray i32 Int32 Int32Array);
+        test_strpos!("alphabet", "z" -> 0; StringViewArray LargeStringArray i32 Int32 Int32Array);
+        test_strpos!("alphabet", "" -> 1; StringViewArray LargeStringArray i32 Int32 Int32Array);
+        test_strpos!("", "a" -> 0; StringViewArray LargeStringArray i32 Int32 Int32Array);
+        test_strpos!("", "" -> 1; StringViewArray LargeStringArray i32 Int32 Int32Array);
+        test_strpos!("ДатаФусион数据融合📊🔥", "📊" -> 15; StringViewArray LargeStringArray i32 Int32 Int32Array);
     }
 }

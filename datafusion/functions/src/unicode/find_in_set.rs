@@ -461,6 +461,7 @@ mod tests {
                 let return_type = fis.return_type(&type_array)?;
                 let result = fis.invoke_with_args(ScalarFunctionArgs {
                     args,
+                    args_data_types: type_array,
                     number_rows: cardinality,
                     return_type: &return_type,
                 });
