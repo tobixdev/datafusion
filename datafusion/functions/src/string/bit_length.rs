@@ -89,11 +89,11 @@ impl ScalarUDFImpl for BitLengthFunc {
             ColumnarValue::Array(v) => Ok(ColumnarValue::Array(bit_length(v.as_ref())?)),
             ColumnarValue::Scalar(v) => {
                 let string = v.try_as_str().flatten();
-                match args.args_data_types[0] {
-                    DataType::Utf8 | DataType::Utf8View => Ok(ColumnarValue::Scalar(
-                        ScalarValue::Int32(string.map(|x| (x.len() * 8) as i32)),
-                    )),
-                    DataType::LargeUtf8 => Ok(ColumnarValue::Scalar(ScalarValue::Int64(
+                match args.return_type {
+                    DataType::Int32 => Ok(ColumnarValue::Scalar(ScalarValue::Int32(
+                        string.map(|x| (x.len() * 8) as i32),
+                    ))),
+                    DataType::Int64 => Ok(ColumnarValue::Scalar(ScalarValue::Int64(
                         string.map(|x| (x.len() * 8) as i64),
                     ))),
                     _ => unreachable!("Unexpected argument type for bit_length"),

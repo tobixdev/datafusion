@@ -345,7 +345,7 @@ pub struct ScalarFunctionArgs<'a> {
     /// The evaluated arguments to the function
     pub args: Vec<ColumnarValue>,
     /// The physical types of the evaluated arguments
-    pub args_data_types: Vec<DataType>, // TODO @tobixdev: Combine them into (ColumnarValue, DataType)
+    pub args_data_types: Vec<DataType>,
     /// The number of rows in record batch being evaluated
     pub number_rows: usize,
     /// The return type of the scalar function returned (from `return_type` or `return_type_from_exprs`)

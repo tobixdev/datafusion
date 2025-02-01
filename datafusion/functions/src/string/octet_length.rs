@@ -89,13 +89,9 @@ impl ScalarUDFImpl for OctetLengthFunc {
             ColumnarValue::Array(v) => Ok(ColumnarValue::Array(length(v.as_ref())?)),
             ColumnarValue::Scalar(v) => {
                 let value = v.try_as_str().flatten();
-                Ok(ColumnarValue::Scalar(match &args.args_data_types[0] {
-                    DataType::Utf8 | DataType::Utf8View => {
-                        ScalarValue::Int32(value.map(|x| x.len() as i32))
-                    }
-                    DataType::LargeUtf8 => {
-                        ScalarValue::Int64(value.map(|x| x.len() as i64))
-                    }
+                Ok(ColumnarValue::Scalar(match &args.return_type {
+                    DataType::Int32 => ScalarValue::Int32(value.map(|x| x.len() as i32)),
+                    DataType::Int64 => ScalarValue::Int64(value.map(|x| x.len() as i64)),
                     _ => unreachable!("OctetLengthFunc"),
                 }))
             }
