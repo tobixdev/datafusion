@@ -49,12 +49,14 @@ fn criterion_benchmark(c: &mut Criterion) {
     let initcap = unicode::initcap();
     for size in [1024, 4096] {
         let args = create_args::<i32>(size, 8, true);
+        let args_data_types: Vec<_> = args.iter().map(|arg| arg.data_type()).collect();
         c.bench_function(
             format!("initcap string view shorter than 12 [size={}]", size).as_str(),
             |b| {
                 b.iter(|| {
                     black_box(initcap.invoke_with_args(ScalarFunctionArgs {
                         args: args.clone(),
+                        args_data_types: args_data_types.clone(),
                         number_rows: size,
                         return_type: &DataType::Utf8View,
                     }))
@@ -63,12 +65,14 @@ fn criterion_benchmark(c: &mut Criterion) {
         );
 
         let args = create_args::<i32>(size, 16, true);
+        let args_data_types: Vec<_> = args.iter().map(|arg| arg.data_type()).collect();
         c.bench_function(
             format!("initcap string view longer than 12 [size={}]", size).as_str(),
             |b| {
                 b.iter(|| {
                     black_box(initcap.invoke_with_args(ScalarFunctionArgs {
                         args: args.clone(),
+                        args_data_types: args_data_types.clone(),
                         number_rows: size,
                         return_type: &DataType::Utf8View,
                     }))
@@ -77,10 +81,12 @@ fn criterion_benchmark(c: &mut Criterion) {
         );
 
         let args = create_args::<i32>(size, 16, false);
+        let args_data_types: Vec<_> = args.iter().map(|arg| arg.data_type()).collect();
         c.bench_function(format!("initcap string [size={}]", size).as_str(), |b| {
             b.iter(|| {
                 black_box(initcap.invoke_with_args(ScalarFunctionArgs {
                     args: args.clone(),
+                    args_data_types: args_data_types.clone(),
                     number_rows: size,
                     return_type: &DataType::Utf8,
                 }))

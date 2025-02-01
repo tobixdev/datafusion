@@ -153,10 +153,12 @@ fn criterion_benchmark(c: &mut Criterion) {
         group.measurement_time(Duration::from_secs(10));
 
         let args = gen_args_array(n_rows, str_len, 0.1, 0.5, false);
+        let args_data_types: Vec<_> = args.iter().map(|arg| arg.data_type()).collect();
         group.bench_function(format!("string_len_{}", str_len), |b| {
             b.iter(|| {
                 black_box(find_in_set.invoke_with_args(ScalarFunctionArgs {
                     args: args.clone(),
+                    args_data_types: args_data_types.clone(),
                     number_rows: n_rows,
                     return_type: &DataType::Int32,
                 }))
@@ -164,10 +166,12 @@ fn criterion_benchmark(c: &mut Criterion) {
         });
 
         let args = gen_args_array(n_rows, str_len, 0.1, 0.5, true);
+        let args_data_types: Vec<_> = args.iter().map(|arg| arg.data_type()).collect();
         group.bench_function(format!("string_view_len_{}", str_len), |b| {
             b.iter(|| {
                 black_box(find_in_set.invoke_with_args(ScalarFunctionArgs {
                     args: args.clone(),
+                    args_data_types: args_data_types.clone(),
                     number_rows: n_rows,
                     return_type: &DataType::Int32,
                 }))
@@ -179,10 +183,12 @@ fn criterion_benchmark(c: &mut Criterion) {
         let mut group = c.benchmark_group("find_in_set_scalar");
 
         let args = gen_args_scalar(n_rows, str_len, 0.1, false);
+        let args_data_types: Vec<_> = args.iter().map(|arg| arg.data_type()).collect();
         group.bench_function(format!("string_len_{}", str_len), |b| {
             b.iter(|| {
                 black_box(find_in_set.invoke_with_args(ScalarFunctionArgs {
                     args: args.clone(),
+                    args_data_types: args_data_types.clone(),
                     number_rows: n_rows,
                     return_type: &DataType::Int32,
                 }))
@@ -190,10 +196,12 @@ fn criterion_benchmark(c: &mut Criterion) {
         });
 
         let args = gen_args_scalar(n_rows, str_len, 0.1, true);
+        let args_data_types: Vec<_> = args.iter().map(|arg| arg.data_type()).collect();
         group.bench_function(format!("string_view_len_{}", str_len), |b| {
             b.iter(|| {
                 black_box(find_in_set.invoke_with_args(ScalarFunctionArgs {
                     args: args.clone(),
+                    args_data_types: args_data_types.clone(),
                     number_rows: n_rows,
                     return_type: &DataType::Int32,
                 }))
