@@ -15,10 +15,10 @@
 // specific language governing permissions and limitations
 // under the License.
 
-use arrow::array::BooleanArray;
-use arrow::array::{make_comparator, ArrayRef, Datum};
+use arrow::array::{make_comparator, ArrayRef, Datum, Scalar};
+use arrow::array::{Array, BooleanArray};
 use arrow::buffer::NullBuffer;
-use arrow::compute::SortOptions;
+use arrow::compute::{cast, SortOptions};
 use arrow::error::ArrowError;
 use datafusion_common::DataFusionError;
 use datafusion_common::{arrow_datafusion_err, internal_err};
@@ -39,12 +39,20 @@ pub fn apply(
         (ColumnarValue::Array(left), ColumnarValue::Array(right)) => {
             Ok(ColumnarValue::Array(f(&left.as_ref(), &right.as_ref())?))
         }
-        (ColumnarValue::Scalar(left), ColumnarValue::Array(right)) => Ok(
-            ColumnarValue::Array(f(&left.to_scalar()?, &right.as_ref())?),
-        ),
-        (ColumnarValue::Array(left), ColumnarValue::Scalar(right)) => Ok(
-            ColumnarValue::Array(f(&left.as_ref(), &right.to_scalar()?)?),
-        ),
+        (ColumnarValue::Scalar(left), ColumnarValue::Array(right)) => {
+            // TODO @tobixdev: Only cast if type is different
+            Ok(ColumnarValue::Array(f(
+                &Scalar::new(cast(&left.to_array()?, right.data_type())?),
+                &right.as_ref(),
+            )?))
+        }
+        (ColumnarValue::Array(left), ColumnarValue::Scalar(right)) => {
+            // TODO @tobixdev: Only cast if type is different
+            Ok(ColumnarValue::Array(f(
+                &left.as_ref(),
+                &Scalar::new(cast(&right.to_array()?, left.data_type())?),
+            )?))
+        }
         (ColumnarValue::Scalar(left), ColumnarValue::Scalar(right)) => {
             let array = f(&left.to_scalar()?, &right.to_scalar()?)?;
             let scalar = ScalarValue::try_from_array(array.as_ref(), 0)?;
