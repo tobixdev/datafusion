@@ -555,7 +555,7 @@ impl AggregateFunctionExpr {
         let expr = Arc::new(Column::new(self.name(), aggr_func_idx));
         let options =
             SortOptions::new(monotonicity == SetMonotonicity::Decreasing, false);
-        Some(PhysicalSortExpr { expr, options })
+        Some(PhysicalSortExpr { expr, options: options })
     }
 }
 

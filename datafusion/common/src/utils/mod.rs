@@ -100,13 +100,13 @@ pub fn compare_rows(
     // Preserving lexical ordering.
     for ((lhs, rhs), sort_options) in zip_it {
         // Consider all combinations of NULLS FIRST/LAST and ASC/DESC configurations.
-        let result = match (lhs.is_null(), rhs.is_null(), sort_options.nulls_first) {
+        let result = match (lhs.is_null(), rhs.is_null(), sort_options.nulls_first()) {
             (true, false, false) | (false, true, true) => Ordering::Greater,
             (true, false, true) | (false, true, false) => Ordering::Less,
-            (false, false, _) => if sort_options.descending {
-                rhs.partial_cmp(lhs)
+            (false, false, _) => if sort_options.descending() {
+                sort_options.ordering().partial_cmp(rhs, lhs)
             } else {
-                lhs.partial_cmp(rhs)
+                sort_options.ordering().partial_cmp(lhs, rhs)
             }
             .ok_or_else(|| {
                 _internal_datafusion_err!("Column array shouldn't be empty")

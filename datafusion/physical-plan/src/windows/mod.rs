@@ -268,7 +268,7 @@ impl StandardWindowFunctionExpr for WindowUDFExpr {
             .zip(schema.column_with_name(self.name()))
             .map(|(options, (idx, field))| {
                 let expr = Arc::new(Column::new(field.name(), idx));
-                PhysicalSortExpr { expr, options }
+                PhysicalSortExpr { expr, options: options }
             })
     }
 }
@@ -289,7 +289,7 @@ pub(crate) fn calc_requirements<
             .collect::<Vec<_>>(),
     );
     for element in orderby_sort_exprs.into_iter() {
-        let PhysicalSortExpr { expr, options } = element.borrow();
+        let PhysicalSortExpr { expr, options: options } = element.borrow();
         if !sort_reqs.iter().any(|e| e.expr.eq(expr)) {
             sort_reqs.push(PhysicalSortRequirement::new(
                 Arc::clone(expr),
@@ -689,7 +689,7 @@ mod tests {
     ) -> PhysicalSortExpr {
         PhysicalSortExpr {
             expr: col(name, schema).unwrap(),
-            options,
+            options: options,
         }
     }
 
@@ -753,7 +753,7 @@ mod tests {
                     descending,
                     nulls_first,
                 };
-                orderbys.push(PhysicalSortExpr { expr, options });
+                orderbys.push(PhysicalSortExpr { expr, options: options });
             }
 
             let mut expected: Option<LexRequirement> = None;
@@ -992,7 +992,7 @@ mod tests {
                 // Give default ordering, this is same with input ordering direction
                 // In this test we do check for reversibility.
                 let options = SortOptions::default();
-                order_by_exprs.push(PhysicalSortExpr { expr, options });
+                order_by_exprs.push(PhysicalSortExpr { expr, options: options });
             }
             let res = get_window_mode(
                 &partition_by_exprs,
@@ -1158,7 +1158,7 @@ mod tests {
                     descending: *descending,
                     nulls_first: *nulls_first,
                 };
-                order_by_exprs.push(PhysicalSortExpr { expr, options });
+                order_by_exprs.push(PhysicalSortExpr { expr, options: options });
             }
 
             assert_eq!(
