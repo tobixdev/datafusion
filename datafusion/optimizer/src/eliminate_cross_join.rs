@@ -21,7 +21,7 @@ use std::sync::Arc;
 
 use crate::join_key_set::JoinKeySet;
 use datafusion_common::tree_node::{Transformed, TreeNode};
-use datafusion_common::Result;
+use datafusion_common::{EqualityNullBehavior, Result};
 use datafusion_expr::expr::{BinaryExpr, Expr};
 use datafusion_expr::logical_plan::{
     Filter, Join, JoinConstraint, JoinType, LogicalPlan, Projection,
@@ -328,7 +328,7 @@ fn find_inner_join(
                 on: join_keys,
                 filter: None,
                 schema: join_schema,
-                null_equals_null: false,
+                equality_null_behavior: EqualityNullBehavior::NullEqualsNothing,
             }));
         }
     }
@@ -350,7 +350,7 @@ fn find_inner_join(
         filter: None,
         join_type: JoinType::Inner,
         join_constraint: JoinConstraint::On,
-        null_equals_null: false,
+        equality_null_behavior: EqualityNullBehavior::NullEqualsNothing,
     }))
 }
 

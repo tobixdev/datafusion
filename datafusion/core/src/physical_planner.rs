@@ -67,7 +67,7 @@ use datafusion_common::tree_node::{
 };
 use datafusion_common::{
     exec_err, internal_datafusion_err, internal_err, not_impl_err, plan_err, DFSchema,
-    ScalarValue,
+    EqualityNullBehavior, ScalarValue,
 };
 use datafusion_datasource::memory::MemorySourceConfig;
 use datafusion_expr::dml::{CopyTo, InsertOp};
@@ -895,11 +895,12 @@ impl DefaultPhysicalPlanner {
                 on: keys,
                 filter,
                 join_type,
-                null_equals_null,
+                equality_null_behavior,
                 schema: join_schema,
                 ..
             }) => {
-                let null_equals_null = *null_equals_null;
+                let null_equals_null =
+                    *equality_null_behavior == EqualityNullBehavior::NullEqualsNull;
 
                 let [physical_left, physical_right] = children.two()?;
 

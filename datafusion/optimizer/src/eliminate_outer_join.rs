@@ -118,7 +118,7 @@ impl OptimizerRule for EliminateOuterJoin {
                         on: join.on.clone(),
                         filter: join.filter.clone(),
                         schema: Arc::clone(&join.schema),
-                        null_equals_null: join.null_equals_null,
+                        equality_null_behavior: join.equality_null_behavior,
                     }));
                     Filter::try_new(filter.predicate, new_join)
                         .map(|f| Transformed::yes(LogicalPlan::Filter(f)))

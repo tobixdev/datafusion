@@ -8475,7 +8475,7 @@ impl serde::Serialize for JoinNode {
         if !self.right_join_key.is_empty() {
             len += 1;
         }
-        if self.null_equals_null {
+        if self.equality_null_behavior != 0 {
             len += 1;
         }
         if self.filter.is_some() {
@@ -8504,8 +8504,10 @@ impl serde::Serialize for JoinNode {
         if !self.right_join_key.is_empty() {
             struct_ser.serialize_field("rightJoinKey", &self.right_join_key)?;
         }
-        if self.null_equals_null {
-            struct_ser.serialize_field("nullEqualsNull", &self.null_equals_null)?;
+        if self.equality_null_behavior != 0 {
+            let v = super::datafusion_common::EqualityNullBehavior::try_from(self.equality_null_behavior)
+                .map_err(|_| serde::ser::Error::custom(format!("Invalid variant {}", self.equality_null_behavior)))?;
+            struct_ser.serialize_field("equalityNullBehavior", &v)?;
         }
         if let Some(v) = self.filter.as_ref() {
             struct_ser.serialize_field("filter", v)?;
@@ -8530,8 +8532,8 @@ impl<'de> serde::Deserialize<'de> for JoinNode {
             "leftJoinKey",
             "right_join_key",
             "rightJoinKey",
-            "null_equals_null",
-            "nullEqualsNull",
+            "equality_null_behavior",
+            "equalityNullBehavior",
             "filter",
         ];
 
@@ -8543,7 +8545,7 @@ impl<'de> serde::Deserialize<'de> for JoinNode {
             JoinConstraint,
             LeftJoinKey,
             RightJoinKey,
-            NullEqualsNull,
+            EqualityNullBehavior,
             Filter,
         }
         impl<'de> serde::Deserialize<'de> for GeneratedField {
@@ -8572,7 +8574,7 @@ impl<'de> serde::Deserialize<'de> for JoinNode {
                             "joinConstraint" | "join_constraint" => Ok(GeneratedField::JoinConstraint),
                             "leftJoinKey" | "left_join_key" => Ok(GeneratedField::LeftJoinKey),
                             "rightJoinKey" | "right_join_key" => Ok(GeneratedField::RightJoinKey),
-                            "nullEqualsNull" | "null_equals_null" => Ok(GeneratedField::NullEqualsNull),
+                            "equalityNullBehavior" | "equality_null_behavior" => Ok(GeneratedField::EqualityNullBehavior),
                             "filter" => Ok(GeneratedField::Filter),
                             _ => Err(serde::de::Error::unknown_field(value, FIELDS)),
                         }
@@ -8599,7 +8601,7 @@ impl<'de> serde::Deserialize<'de> for JoinNode {
                 let mut join_constraint__ = None;
                 let mut left_join_key__ = None;
                 let mut right_join_key__ = None;
-                let mut null_equals_null__ = None;
+                let mut equality_null_behavior__ = None;
                 let mut filter__ = None;
                 while let Some(k) = map_.next_key()? {
                     match k {
@@ -8639,11 +8641,11 @@ impl<'de> serde::Deserialize<'de> for JoinNode {
                             }
                             right_join_key__ = Some(map_.next_value()?);
                         }
-                        GeneratedField::NullEqualsNull => {
-                            if null_equals_null__.is_some() {
-                                return Err(serde::de::Error::duplicate_field("nullEqualsNull"));
+                        GeneratedField::EqualityNullBehavior => {
+                            if equality_null_behavior__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("equalityNullBehavior"));
                             }
-                            null_equals_null__ = Some(map_.next_value()?);
+                            equality_null_behavior__ = Some(map_.next_value::<super::datafusion_common::EqualityNullBehavior>()? as i32);
                         }
                         GeneratedField::Filter => {
                             if filter__.is_some() {
@@ -8660,7 +8662,7 @@ impl<'de> serde::Deserialize<'de> for JoinNode {
                     join_constraint: join_constraint__.unwrap_or_default(),
                     left_join_key: left_join_key__.unwrap_or_default(),
                     right_join_key: right_join_key__.unwrap_or_default(),
-                    null_equals_null: null_equals_null__.unwrap_or_default(),
+                    equality_null_behavior: equality_null_behavior__.unwrap_or_default(),
                     filter: filter__,
                 })
             }
