@@ -369,8 +369,8 @@ pub struct JoinNode {
     pub left_join_key: ::prost::alloc::vec::Vec<LogicalExprNode>,
     #[prost(message, repeated, tag = "6")]
     pub right_join_key: ::prost::alloc::vec::Vec<LogicalExprNode>,
-    #[prost(bool, tag = "7")]
-    pub null_equals_null: bool,
+    #[prost(enumeration = "super::datafusion_common::EqualityNullBehavior", tag = "7")]
+    pub equality_null_behavior: i32,
     #[prost(message, optional, tag = "8")]
     pub filter: ::core::option::Option<LogicalExprNode>,
 }

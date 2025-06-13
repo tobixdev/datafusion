@@ -56,7 +56,8 @@ use datafusion_common::file_options::file_type::FileType;
 use datafusion_common::{
     exec_err, get_target_functional_dependencies, internal_err, not_impl_err,
     plan_datafusion_err, plan_err, Column, Constraints, DFSchema, DFSchemaRef,
-    DataFusionError, Result, ScalarValue, TableReference, ToDFSchema, UnnestOptions,
+    DataFusionError, EqualityNullBehavior, Result, ScalarValue, TableReference,
+    ToDFSchema, UnnestOptions,
 };
 use datafusion_expr_common::type_coercion::binary::type_union_resolution;
 
@@ -903,7 +904,13 @@ impl LogicalPlanBuilder {
         join_keys: (Vec<impl Into<Column>>, Vec<impl Into<Column>>),
         filter: Option<Expr>,
     ) -> Result<Self> {
-        self.join_detailed(right, join_type, join_keys, filter, false)
+        self.join_detailed(
+            right,
+            join_type,
+            join_keys,
+            filter,
+            EqualityNullBehavior::NullEqualsNothing,
+        )
     }
 
     /// Apply a join using the specified expressions.
@@ -959,7 +966,7 @@ impl LogicalPlanBuilder {
             join_type,
             (Vec::<Column>::new(), Vec::<Column>::new()),
             filter,
-            false,
+            EqualityNullBehavior::NullEqualsNothing,
         )
     }
 
@@ -996,7 +1003,7 @@ impl LogicalPlanBuilder {
         join_type: JoinType,
         join_keys: (Vec<impl Into<Column>>, Vec<impl Into<Column>>),
         filter: Option<Expr>,
-        null_equals_null: bool,
+        equality_null_behavior: EqualityNullBehavior,
     ) -> Result<Self> {
         if join_keys.0.len() != join_keys.1.len() {
             return plan_err!("left_keys and right_keys were not the same length");
@@ -1113,7 +1120,7 @@ impl LogicalPlanBuilder {
             join_type,
             join_constraint: JoinConstraint::On,
             schema: DFSchemaRef::new(join_schema),
-            null_equals_null,
+            equality_null_behavior,
         })))
     }
 
@@ -1186,7 +1193,7 @@ impl LogicalPlanBuilder {
                 filters,
                 join_type,
                 JoinConstraint::Using,
-                false,
+                EqualityNullBehavior::NullEqualsNothing,
             )?;
 
             Ok(Self::new(LogicalPlan::Join(join)))
@@ -1202,7 +1209,7 @@ impl LogicalPlanBuilder {
             None,
             JoinType::Inner,
             JoinConstraint::On,
-            false,
+            EqualityNullBehavior::NullEqualsNothing,
         )?;
 
         Ok(Self::new(LogicalPlan::Join(join)))
@@ -1340,12 +1347,24 @@ impl LogicalPlanBuilder {
             .unzip();
         if is_all {
             LogicalPlanBuilder::from(left_plan)
-                .join_detailed(right_plan, join_type, join_keys, None, true)?
+                .join_detailed(
+                    right_plan,
+                    join_type,
+                    join_keys,
+                    None,
+                    EqualityNullBehavior::NullEqualsNull,
+                )?
                 .build()
         } else {
             LogicalPlanBuilder::from(left_plan)
                 .distinct()?
-                .join_detailed(right_plan, join_type, join_keys, None, true)?
+                .join_detailed(
+                    right_plan,
+                    join_type,
+                    join_keys,
+                    None,
+                    EqualityNullBehavior::NullEqualsNull,
+                )?
                 .build()
         }
     }
@@ -1423,7 +1442,7 @@ impl LogicalPlanBuilder {
             filter,
             join_type,
             JoinConstraint::On,
-            false,
+            EqualityNullBehavior::NullEqualsNothing,
         )?;
 
         Ok(Self::new(LogicalPlan::Join(join)))

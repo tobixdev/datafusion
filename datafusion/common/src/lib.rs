@@ -41,6 +41,7 @@ pub mod config;
 pub mod cse;
 pub mod diagnostic;
 pub mod display;
+mod equality_null_behavior;
 pub mod error;
 pub mod file_options;
 pub mod format;
@@ -64,6 +65,7 @@ pub use dfschema::{
     qualified_name, DFSchema, DFSchemaRef, ExprSchema, SchemaExt, ToDFSchema,
 };
 pub use diagnostic::Diagnostic;
+pub use equality_null_behavior::EqualityNullBehavior;
 pub use error::{
     field_not_found, unqualified_field_not_found, DataFusionError, Result, SchemaError,
     SharedResult,

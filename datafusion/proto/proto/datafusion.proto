@@ -243,7 +243,7 @@ message JoinNode {
   datafusion_common.JoinConstraint join_constraint = 4;
   repeated LogicalExprNode left_join_key = 5;
   repeated LogicalExprNode right_join_key = 6;
-  bool null_equals_null = 7;
+  datafusion_common.EqualityNullBehavior equality_null_behavior = 7;
   LogicalExprNode filter = 8;
 }
 
