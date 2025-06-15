@@ -56,8 +56,8 @@ use datafusion_common::file_options::file_type::FileType;
 use datafusion_common::{
     exec_err, get_target_functional_dependencies, internal_err, not_impl_err,
     plan_datafusion_err, plan_err, Column, Constraints, DFSchema, DFSchemaRef,
-    DataFusionError, EqualityNullBehavior, Result, ScalarValue, TableReference,
-    ToDFSchema, UnnestOptions,
+    DataFusionError, NullEquality, Result, ScalarValue, TableReference, ToDFSchema,
+    UnnestOptions,
 };
 use datafusion_expr_common::type_coercion::binary::type_union_resolution;
 
@@ -909,7 +909,7 @@ impl LogicalPlanBuilder {
             join_type,
             join_keys,
             filter,
-            EqualityNullBehavior::NullEqualsNothing,
+            NullEquality::NullEqualsNothing,
         )
     }
 
@@ -966,7 +966,7 @@ impl LogicalPlanBuilder {
             join_type,
             (Vec::<Column>::new(), Vec::<Column>::new()),
             filter,
-            EqualityNullBehavior::NullEqualsNothing,
+            NullEquality::NullEqualsNothing,
         )
     }
 
@@ -994,16 +994,14 @@ impl LogicalPlanBuilder {
     /// The behavior is the same as [`join`](Self::join) except that it allows
     /// specifying the null equality behavior.
     ///
-    /// If `null_equals_null=true`, rows where both join keys are `null` will be
-    /// emitted. Otherwise rows where either or both join keys are `null` will be
-    /// omitted.
+    /// The `null_equality` dictates how `null` values are joined.
     pub fn join_detailed(
         self,
         right: LogicalPlan,
         join_type: JoinType,
         join_keys: (Vec<impl Into<Column>>, Vec<impl Into<Column>>),
         filter: Option<Expr>,
-        equality_null_behavior: EqualityNullBehavior,
+        null_equality: NullEquality,
     ) -> Result<Self> {
         if join_keys.0.len() != join_keys.1.len() {
             return plan_err!("left_keys and right_keys were not the same length");
@@ -1120,7 +1118,7 @@ impl LogicalPlanBuilder {
             join_type,
             join_constraint: JoinConstraint::On,
             schema: DFSchemaRef::new(join_schema),
-            equality_null_behavior,
+            null_equality,
         })))
     }
 
@@ -1193,7 +1191,7 @@ impl LogicalPlanBuilder {
                 filters,
                 join_type,
                 JoinConstraint::Using,
-                EqualityNullBehavior::NullEqualsNothing,
+                NullEquality::NullEqualsNothing,
             )?;
 
             Ok(Self::new(LogicalPlan::Join(join)))
@@ -1209,7 +1207,7 @@ impl LogicalPlanBuilder {
             None,
             JoinType::Inner,
             JoinConstraint::On,
-            EqualityNullBehavior::NullEqualsNothing,
+            NullEquality::NullEqualsNothing,
         )?;
 
         Ok(Self::new(LogicalPlan::Join(join)))
@@ -1352,7 +1350,7 @@ impl LogicalPlanBuilder {
                     join_type,
                     join_keys,
                     None,
-                    EqualityNullBehavior::NullEqualsNull,
+                    NullEquality::NullEqualsNull,
                 )?
                 .build()
         } else {
@@ -1363,7 +1361,7 @@ impl LogicalPlanBuilder {
                     join_type,
                     join_keys,
                     None,
-                    EqualityNullBehavior::NullEqualsNull,
+                    NullEquality::NullEqualsNull,
                 )?
                 .build()
         }
@@ -1442,7 +1440,7 @@ impl LogicalPlanBuilder {
             filter,
             join_type,
             JoinConstraint::On,
-            EqualityNullBehavior::NullEqualsNothing,
+            NullEquality::NullEqualsNothing,
         )?;
 
         Ok(Self::new(LogicalPlan::Join(join)))

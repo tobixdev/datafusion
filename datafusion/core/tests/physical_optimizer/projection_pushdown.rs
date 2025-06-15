@@ -25,8 +25,8 @@ use datafusion::datasource::memory::MemorySourceConfig;
 use datafusion::datasource::physical_plan::CsvSource;
 use datafusion::datasource::source::DataSourceExec;
 use datafusion_common::config::ConfigOptions;
-use datafusion_common::Result;
 use datafusion_common::{JoinSide, JoinType, ScalarValue};
+use datafusion_common::{NullEquality, Result};
 use datafusion_execution::object_store::ObjectStoreUrl;
 use datafusion_execution::{SendableRecordBatchStream, TaskContext};
 use datafusion_expr::{
@@ -875,7 +875,7 @@ fn test_join_after_projection() -> Result<()> {
             ])),
         )),
         &JoinType::Inner,
-        true,
+        NullEquality::NullEqualsNull,
         None,
         None,
         StreamJoinPartitionMode::SinglePartition,
@@ -989,7 +989,7 @@ fn test_join_after_required_projection() -> Result<()> {
             ])),
         )),
         &JoinType::Inner,
-        true,
+        NullEquality::NullEqualsNull,
         None,
         None,
         StreamJoinPartitionMode::SinglePartition,
@@ -1150,7 +1150,7 @@ fn test_hash_join_after_projection() -> Result<()> {
         &JoinType::Inner,
         None,
         PartitionMode::Auto,
-        true,
+        NullEquality::NullEqualsNull,
     )?);
     let projection: Arc<dyn ExecutionPlan> = Arc::new(ProjectionExec::try_new(
         vec![

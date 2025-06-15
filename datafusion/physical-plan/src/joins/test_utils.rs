@@ -33,7 +33,7 @@ use arrow::array::{
 };
 use arrow::datatypes::{DataType, Schema};
 use arrow::util::pretty::pretty_format_batches;
-use datafusion_common::{Result, ScalarValue};
+use datafusion_common::{NullEquality, Result, ScalarValue};
 use datafusion_execution::TaskContext;
 use datafusion_expr::{JoinType, Operator};
 use datafusion_physical_expr::expressions::{binary, cast, col, lit};
@@ -74,7 +74,7 @@ pub async fn partitioned_sym_join_with_filter(
     on: JoinOn,
     filter: Option<JoinFilter>,
     join_type: &JoinType,
-    null_equals_null: bool,
+    null_equality: NullEquality,
     context: Arc<TaskContext>,
 ) -> Result<Vec<RecordBatch>> {
     let partition_count = 4;
@@ -101,7 +101,7 @@ pub async fn partitioned_sym_join_with_filter(
         on,
         filter,
         join_type,
-        null_equals_null,
+        null_equality,
         left.output_ordering().map(|p| LexOrdering::new(p.to_vec())),
         right
             .output_ordering()
@@ -130,7 +130,7 @@ pub async fn partitioned_hash_join_with_filter(
     on: JoinOn,
     filter: Option<JoinFilter>,
     join_type: &JoinType,
-    null_equals_null: bool,
+    null_equality: NullEquality,
     context: Arc<TaskContext>,
 ) -> Result<Vec<RecordBatch>> {
     let partition_count = 4;
@@ -153,7 +153,7 @@ pub async fn partitioned_hash_join_with_filter(
         join_type,
         None,
         PartitionMode::Partitioned,
-        null_equals_null,
+        null_equality,
     )?);
 
     let mut batches = vec![];

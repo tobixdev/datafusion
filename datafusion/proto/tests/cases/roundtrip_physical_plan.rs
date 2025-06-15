@@ -97,7 +97,7 @@ use datafusion_common::file_options::json_writer::JsonWriterOptions;
 use datafusion_common::parsers::CompressionTypeVariant;
 use datafusion_common::stats::Precision;
 use datafusion_common::{
-    internal_err, not_impl_err, DataFusionError, Result, UnnestOptions,
+    internal_err, not_impl_err, DataFusionError, NullEquality, Result, UnnestOptions,
 };
 use datafusion_expr::{
     Accumulator, AccumulatorFactoryFunction, AggregateUDF, ColumnarValue, ScalarUDF,
@@ -268,7 +268,7 @@ fn roundtrip_hash_join() -> Result<()> {
                 join_type,
                 None,
                 *partition_mode,
-                false,
+                NullEquality::NullEqualsNothing,
             )?))?;
         }
     }
@@ -1490,7 +1490,7 @@ fn roundtrip_sym_hash_join() -> Result<()> {
                             on.clone(),
                             None,
                             join_type,
-                            false,
+                            NullEquality::NullEqualsNothing,
                             left_order.clone(),
                             right_order.clone(),
                             *partition_mode,

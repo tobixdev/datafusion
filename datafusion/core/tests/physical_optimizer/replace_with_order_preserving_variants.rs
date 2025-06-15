@@ -41,7 +41,7 @@ use datafusion_physical_plan::{
 };
 use datafusion::datasource::source::DataSourceExec;
 use datafusion_common::tree_node::{TransformedResult, TreeNode};
-use datafusion_common::{assert_contains, Result};
+use datafusion_common::{assert_contains, NullEquality, Result};
 use datafusion_expr::{JoinType, Operator};
 use datafusion_physical_expr::expressions::{self, col, Column};
 use datafusion_physical_expr::PhysicalSortExpr;
@@ -1213,7 +1213,7 @@ fn hash_join_exec(
             &JoinType::Inner,
             None,
             PartitionMode::Partitioned,
-            false,
+            NullEquality::NullEqualsNothing,
         )
         .unwrap(),
     )

@@ -15,19 +15,20 @@
 // specific language governing permissions and limitations
 // under the License.
 
-/// Represents the null-handling behavior when evaluating equality.
+/// Represents the behavior for null values when evaluating equality.
 ///
 /// # Order
 ///
 /// The order on this type represents the "restrictiveness" of the behavior. The more restrictive
-/// a behavior is, the fewer elements are considered to be equal to `null`.
-/// [EqualityNullBehavior::NullEqualsNothing] represents the most restrictive behavior.
+/// a behavior is, the fewer elements are considered to be equal to null.
+/// [NullEquality::NullEqualsNothing] represents the most restrictive behavior.
 ///
-/// This mirrors the old order with booleans, as `false` indicated that `null != null`.
+/// This mirrors the old order with `null_equals_null` booleans, as `false` indicated that
+/// `null != null`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Hash)]
-pub enum EqualityNullBehavior {
-    /// Null is *not* equal to null while joining (`null != null`)
+pub enum NullEquality {
+    /// Null is *not* equal to anything (`null != null`)
     NullEqualsNothing,
-    /// Null is equal to null while joining (`null == null`)
+    /// Null is equal to null (`null == null`)
     NullEqualsNull,
 }

@@ -19,7 +19,7 @@ use std::sync::Arc;
 
 use datafusion::execution::registry::FunctionRegistry;
 use datafusion_common::{
-    exec_datafusion_err, internal_err, plan_datafusion_err, EqualityNullBehavior,
+    exec_datafusion_err, internal_err, plan_datafusion_err, NullEquality,
     RecursionUnnestOption, Result, ScalarValue, TableReference, UnnestOptions,
 };
 use datafusion_expr::dml::InsertOp;
@@ -218,15 +218,11 @@ impl From<protobuf::JoinConstraint> for JoinConstraint {
     }
 }
 
-impl From<protobuf::EqualityNullBehavior> for EqualityNullBehavior {
-    fn from(t: protobuf::EqualityNullBehavior) -> Self {
+impl From<protobuf::NullEquality> for NullEquality {
+    fn from(t: protobuf::NullEquality) -> Self {
         match t {
-            protobuf::EqualityNullBehavior::NullEqualsNothing => {
-                EqualityNullBehavior::NullEqualsNothing
-            }
-            protobuf::EqualityNullBehavior::NullEqualsNull => {
-                EqualityNullBehavior::NullEqualsNull
-            }
+            protobuf::NullEquality::NullEqualsNothing => NullEquality::NullEqualsNothing,
+            protobuf::NullEquality::NullEqualsNull => NullEquality::NullEqualsNull,
         }
     }
 }

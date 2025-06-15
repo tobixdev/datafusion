@@ -17,7 +17,7 @@
 
 use crate::logical_plan::producer::{make_binary_op_scalar_func, SubstraitProducer};
 use datafusion::common::{
-    not_impl_err, DFSchemaRef, EqualityNullBehavior, JoinConstraint, JoinType,
+    not_impl_err, DFSchemaRef, JoinConstraint, JoinType, NullEquality,
 };
 use datafusion::logical_expr::{Expr, Join, Operator};
 use std::sync::Arc;
@@ -46,7 +46,7 @@ pub fn from_join(
 
     // map the left and right columns to binary expressions in the form `l = r`
     // build a single expression for the ON condition, such as `l.a = r.a AND l.b = r.b`
-    let eq_op = if join.equality_null_behavior == EqualityNullBehavior::NullEqualsNull {
+    let eq_op = if join.null_equality == NullEquality::NullEqualsNull {
         Operator::IsNotDistinctFrom
     } else {
         Operator::Eq

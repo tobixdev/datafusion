@@ -967,11 +967,11 @@ impl JoinConstraint {
 }
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration)]
 #[repr(i32)]
-pub enum EqualityNullBehavior {
+pub enum NullEquality {
     NullEqualsNothing = 0,
     NullEqualsNull = 1,
 }
-impl EqualityNullBehavior {
+impl NullEquality {
     /// String value of the enum field names used in the ProtoBuf definition.
     ///
     /// The values are not transformed in any way and thus are considered stable

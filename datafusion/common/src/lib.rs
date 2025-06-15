@@ -41,12 +41,12 @@ pub mod config;
 pub mod cse;
 pub mod diagnostic;
 pub mod display;
-mod equality_null_behavior;
 pub mod error;
 pub mod file_options;
 pub mod format;
 pub mod hash_utils;
 pub mod instant;
+mod null_equality;
 pub mod parsers;
 pub mod pruning;
 pub mod rounding;
@@ -65,7 +65,6 @@ pub use dfschema::{
     qualified_name, DFSchema, DFSchemaRef, ExprSchema, SchemaExt, ToDFSchema,
 };
 pub use diagnostic::Diagnostic;
-pub use equality_null_behavior::EqualityNullBehavior;
 pub use error::{
     field_not_found, unqualified_field_not_found, DataFusionError, Result, SchemaError,
     SharedResult,
@@ -81,6 +80,7 @@ pub use functional_dependencies::{
 };
 use hashbrown::hash_map::DefaultHashBuilder;
 pub use join_type::{JoinConstraint, JoinSide, JoinType};
+pub use null_equality::NullEquality;
 pub use param_value::ParamValues;
 pub use scalar::{ScalarType, ScalarValue};
 pub use schema_reference::SchemaReference;

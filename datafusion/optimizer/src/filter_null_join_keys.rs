@@ -21,7 +21,7 @@ use crate::optimizer::ApplyOrder;
 use crate::push_down_filter::on_lr_is_preserved;
 use crate::{OptimizerConfig, OptimizerRule};
 use datafusion_common::tree_node::Transformed;
-use datafusion_common::{EqualityNullBehavior, Result};
+use datafusion_common::{NullEquality, Result};
 use datafusion_expr::utils::conjunction;
 use datafusion_expr::{logical_plan::Filter, Expr, ExprSchemable, LogicalPlan};
 use std::sync::Arc;
@@ -52,8 +52,7 @@ impl OptimizerRule for FilterNullJoinKeys {
         match plan {
             LogicalPlan::Join(mut join)
                 if !join.on.is_empty()
-                    && join.equality_null_behavior
-                        == EqualityNullBehavior::NullEqualsNothing =>
+                    && join.null_equality == NullEquality::NullEqualsNothing =>
             {
                 let (left_preserved, right_preserved) =
                     on_lr_is_preserved(join.join_type);

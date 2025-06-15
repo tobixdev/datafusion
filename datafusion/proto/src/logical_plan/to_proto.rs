@@ -21,7 +21,7 @@
 
 use std::collections::HashMap;
 
-use datafusion_common::{EqualityNullBehavior, TableReference, UnnestOptions};
+use datafusion_common::{NullEquality, TableReference, UnnestOptions};
 use datafusion_expr::dml::InsertOp;
 use datafusion_expr::expr::{
     self, AggregateFunctionParams, Alias, Between, BinaryExpr, Cast, GroupingSet, InList,
@@ -701,15 +701,11 @@ impl From<JoinConstraint> for protobuf::JoinConstraint {
     }
 }
 
-impl From<EqualityNullBehavior> for protobuf::EqualityNullBehavior {
-    fn from(t: EqualityNullBehavior) -> Self {
+impl From<NullEquality> for protobuf::NullEquality {
+    fn from(t: NullEquality) -> Self {
         match t {
-            EqualityNullBehavior::NullEqualsNothing => {
-                protobuf::EqualityNullBehavior::NullEqualsNothing
-            }
-            EqualityNullBehavior::NullEqualsNull => {
-                protobuf::EqualityNullBehavior::NullEqualsNull
-            }
+            NullEquality::NullEqualsNothing => protobuf::NullEquality::NullEqualsNothing,
+            NullEquality::NullEqualsNull => protobuf::NullEquality::NullEqualsNull,
         }
     }
 }
