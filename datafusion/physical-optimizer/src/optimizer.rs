@@ -37,6 +37,7 @@ use crate::topk_aggregation::TopKAggregation;
 use crate::update_aggr_exprs::OptimizeAggregateOrder;
 
 use crate::coalesce_async_exec_input::CoalesceAsyncExecInput;
+use crate::nl_join_projection_pushdown::NestedLoopJoinProjectionPushDown;
 use datafusion_common::config::ConfigOptions;
 use datafusion_common::Result;
 use datafusion_physical_plan::ExecutionPlan;
@@ -93,6 +94,9 @@ impl PhysicalOptimizer {
             // repartitioning and local sorting steps to meet distribution and ordering requirements.
             // Therefore, it should run before EnforceDistribution and EnforceSorting.
             Arc::new(JoinSelection::new()),
+            // After the join type has been determined, the NestedLoopJoinProjectionPushDown rule
+            // will try to push parts of nested loop join filter expressions down as projections.
+            Arc::new(NestedLoopJoinProjectionPushDown::new()),
             // The LimitedDistinctAggregation rule should be applied before the EnforceDistribution rule,
             // as that rule may inject other operations in between the different AggregateExecs.
             // Applying the rule early means only directly-connected AggregateExecs must be examined.
