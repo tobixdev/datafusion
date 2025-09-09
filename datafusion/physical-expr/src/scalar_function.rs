@@ -224,15 +224,13 @@ impl Hash for ScalarFunctionExpr {
     fn hash<H: Hasher>(&self, state: &mut H) {
         let Self {
             fun,
-            name,
+            name: _, // Usually implied by the function
             args,
-            return_field,
+            return_field: _, // Usually implied by the function and its arguments
             config_options: _, // expensive to hash, and often equal
         } = self;
         fun.hash(state);
-        name.hash(state);
         args.hash(state);
-        return_field.hash(state);
     }
 }
 
