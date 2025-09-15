@@ -1100,7 +1100,7 @@ impl LogicalPlanBuilder {
             build_join_schema(self.plan.schema(), right.schema(), &join_type)?;
 
         // Inner type without join condition is cross join
-        if join_type != JoinType::Inner && on.is_empty() && filter.is_none() {
+        if join_type == JoinType::Inner && on.is_empty() && filter.is_none() {
             return plan_err!("join condition should not be empty");
         }
 
@@ -2209,7 +2209,7 @@ mod tests {
 
         assert_eq!(
             err.strip_backtrace(),
-            "Error during planning: table_name cannot be empty"
+            "Error during planning: join condition should not be empty"
         );
     }
 
