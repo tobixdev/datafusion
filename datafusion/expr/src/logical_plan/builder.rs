@@ -2196,6 +2196,42 @@ mod tests {
     }
 
     #[test]
+    fn plan_builder_join_cannot_accidentally_create_cross_join() {
+        let schema = employee_schema();
+        let lhs = LogicalPlanBuilder::scan("lhs", table_source(&schema), None).unwrap();
+        let rhs = LogicalPlanBuilder::scan("rhs", table_source(&schema), None)
+            .unwrap()
+            .build()
+            .unwrap();
+
+        let join_on = (Vec::<Column>::new(), Vec::<Column>::new());
+        let err = lhs.join(rhs, JoinType::Inner, join_on, None).unwrap_err();
+
+        assert_eq!(
+            err.strip_backtrace(),
+            "Error during planning: table_name cannot be empty"
+        );
+    }
+
+    #[test]
+    fn plan_builder_join_no_filter_is_ok_for_non_inner_join() {
+        let schema = employee_schema();
+        let lhs = LogicalPlanBuilder::scan("lhs", table_source(&schema), None).unwrap();
+        let rhs = LogicalPlanBuilder::scan("rhs", table_source(&schema), None)
+            .unwrap()
+            .build()
+            .unwrap();
+
+        let join_on = (Vec::<Column>::new(), Vec::<Column>::new());
+        let join = lhs.join(rhs, JoinType::Left, join_on, None);
+
+        assert!(
+            join.is_ok(),
+            "A non-inner join without a filter should be allowed"
+        );
+    }
+
+    #[test]
     fn plan_builder_sort() -> Result<()> {
         let plan =
             table_scan(Some("employee_csv"), &employee_schema(), Some(vec![3, 4]))?
