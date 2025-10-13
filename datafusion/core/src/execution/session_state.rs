@@ -53,7 +53,10 @@ use datafusion_expr::expr_rewriter::FunctionRewrite;
 use datafusion_expr::planner::ExprPlanner;
 #[cfg(feature = "sql")]
 use datafusion_expr::planner::TypePlanner;
-use datafusion_expr::registry::{FunctionRegistry, SerializerRegistry};
+use datafusion_expr::registry::{
+    ExtensionTypeRegistry, FunctionRegistry, MemoryExtensionTypeRegistry,
+    SerializerRegistry,
+};
 use datafusion_expr::simplify::SimplifyInfo;
 #[cfg(feature = "sql")]
 use datafusion_expr::TableSource;
@@ -78,6 +81,7 @@ use datafusion_sql::{
 
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
+use datafusion_common::types::LogicalTypeRef;
 use itertools::Itertools;
 use log::{debug, info};
 use object_store::ObjectStore;
@@ -157,6 +161,8 @@ pub struct SessionState {
     aggregate_functions: HashMap<String, Arc<AggregateUDF>>,
     /// Window functions registered in the context
     window_functions: HashMap<String, Arc<WindowUDF>>,
+    /// Extension types registered in the context
+    extension_types: MemoryExtensionTypeRegistry,
     /// Deserializer registry for extensions.
     serializer_registry: Arc<dyn SerializerRegistry>,
     /// Holds registered external FileFormat implementations
@@ -258,6 +264,10 @@ impl Session for SessionState {
 
     fn window_functions(&self) -> &HashMap<String, Arc<WindowUDF>> {
         &self.window_functions
+    }
+
+    fn extension_types(&self) -> &MemoryExtensionTypeRegistry {
+        &self.extension_types
     }
 
     fn runtime_env(&self) -> &Arc<RuntimeEnv> {
@@ -1363,6 +1373,7 @@ impl SessionStateBuilder {
             scalar_functions,
             aggregate_functions,
             window_functions,
+            extension_types,
             serializer_registry,
             file_formats,
             table_options,
@@ -1927,6 +1938,29 @@ impl FunctionRegistry for SessionState {
     }
 }
 
+impl ExtensionTypeRegistry for SessionState {
+    fn get_extension_type(
+        &self,
+        name: &str,
+    ) -> datafusion_common::Result<LogicalTypeRef> {
+        self.extension_types.get_extension_type(name)
+    }
+
+    fn register_extension_type(
+        &mut self,
+        logical_type: LogicalTypeRef,
+    ) -> datafusion_common::Result<Option<LogicalTypeRef>> {
+        self.extension_types.register_extension_type(logical_type)
+    }
+
+    fn deregister_extension_type(
+        &mut self,
+        name: &str,
+    ) -> datafusion_common::Result<Option<LogicalTypeRef>> {
+        self.extension_types.deregister_extension_type(name)
+    }
+}
+
 impl OptimizerConfig for SessionState {
     fn query_execution_start_time(&self) -> DateTime<Utc> {
         self.execution_props.query_execution_start_time
@@ -1956,6 +1990,7 @@ impl From<&SessionState> for TaskContext {
             state.scalar_functions.clone(),
             state.aggregate_functions.clone(),
             state.window_functions.clone(),
+            state.extension_types.clone(),
             Arc::clone(&state.runtime_env),
         )
     }

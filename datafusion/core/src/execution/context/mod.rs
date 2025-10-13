@@ -88,6 +88,8 @@ use datafusion_session::SessionStore;
 
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
+use datafusion_common::types::LogicalTypeRef;
+use datafusion_expr::registry::ExtensionTypeRegistry;
 use object_store::ObjectStore;
 use parking_lot::RwLock;
 use url::Url;
@@ -1751,6 +1753,26 @@ impl FunctionRegistry for SessionContext {
 
     fn udwfs(&self) -> HashSet<String> {
         self.state.read().udwfs()
+    }
+}
+
+impl ExtensionTypeRegistry for SessionContext {
+    fn get_extension_type(&self, name: &str) -> Result<LogicalTypeRef> {
+        self.state.read().get_extension_type(name)
+    }
+
+    fn register_extension_type(
+        &mut self,
+        logical_type: LogicalTypeRef,
+    ) -> Result<Option<LogicalTypeRef>> {
+        self.state.write().register_extension_type(logical_type)
+    }
+
+    fn deregister_extension_type(
+        &mut self,
+        name: &str,
+    ) -> Result<Option<LogicalTypeRef>> {
+        self.state.write().deregister_extension_type(name)
     }
 }
 
