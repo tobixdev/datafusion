@@ -245,14 +245,16 @@ pub trait ExtensionTypeRegistry {
 #[derive(Clone, Debug)]
 pub struct MemoryExtensionTypeRegistry {
     /// Holds a mapping between the name of an extension type and its logical type.
+    ///
+    /// TODO: Use TypeSignature to support arguments
     extension_types: HashMap<String, LogicalTypeRef>,
 }
 
 impl Default for MemoryExtensionTypeRegistry {
     fn default() -> Self {
-        let mut registry = MemoryExtensionTypeRegistry::new();
-        // TODO add canonical types
-        registry
+        MemoryExtensionTypeRegistry {
+            extension_types: HashMap::new(),
+        }
     }
 }
 
@@ -262,6 +264,29 @@ impl MemoryExtensionTypeRegistry {
         Self {
             extension_types: HashMap::new(),
         }
+    }
+
+    /// Creates a new [MemoryExtensionTypeRegistry] with the provided `types`.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if one of the `types` is a native type.
+    pub fn new_with_types(
+        types: impl IntoIterator<Item = LogicalTypeRef>,
+    ) -> Result<Self> {
+        let extension_types = types
+            .into_iter()
+            .map(|t| match t.signature() {
+                TypeSignature::Native(_) => todo!("TODO"),
+                TypeSignature::Extension { name, .. } => (name.to_owned(), t),
+            })
+            .collect();
+        Ok(Self { extension_types })
+    }
+
+    /// Returns a list of all registered types.
+    pub fn all_types(&self) -> Vec<LogicalTypeRef> {
+        self.extension_types.values().cloned().collect()
     }
 }
 

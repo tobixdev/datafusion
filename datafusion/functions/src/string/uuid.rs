@@ -18,14 +18,15 @@
 use std::any::Any;
 use std::sync::Arc;
 
-use arrow::array::GenericStringBuilder;
-use arrow::datatypes::DataType;
+use arrow::array::FixedSizeBinaryBuilder;
 use arrow::datatypes::DataType::Utf8;
+use arrow::datatypes::{DataType, Field, FieldRef};
 use rand::Rng;
 use uuid::Uuid;
 
 use datafusion_common::{internal_err, Result};
-use datafusion_expr::{ColumnarValue, Documentation, Volatility};
+use datafusion_common::types::UuidType;
+use datafusion_expr::{ColumnarValue, Documentation, ReturnFieldArgs, Volatility};
 use datafusion_expr::{ScalarFunctionArgs, ScalarUDFImpl, Signature};
 use datafusion_macros::user_doc;
 
@@ -75,7 +76,12 @@ impl ScalarUDFImpl for UuidFunc {
     }
 
     fn return_type(&self, _arg_types: &[DataType]) -> Result<DataType> {
-        Ok(Utf8)
+        unreachable!("return_field_from_args is overwritten")
+    }
+
+    fn return_field_from_args(&self, _args: ReturnFieldArgs) -> Result<FieldRef> {
+        // TODO: pass-in the registry
+        Ok(Arc::new(Field::new("output", Utf8, false).with_extension_type(UuidType::new())))
     }
 
     /// Prints random (v4) uuid values per row
@@ -90,10 +96,7 @@ impl ScalarUDFImpl for UuidFunc {
         let mut randoms = vec![0u128; args.number_rows];
         rng.fill(&mut randoms[..]);
 
-        let mut builder = GenericStringBuilder::<i32>::with_capacity(
-            args.number_rows,
-            args.number_rows * 36,
-        );
+        let mut builder = FixedSizeBinaryBuilder::with_capacity(args.number_rows, 16);
 
         let mut buffer = [0u8; 36];
         for x in &mut randoms {
@@ -101,7 +104,9 @@ impl ScalarUDFImpl for UuidFunc {
             *x = *x & 0xFFFFFFFFFFFF4FFFBFFFFFFFFFFFFFFF | 0x40008000000000000000;
             let uuid = Uuid::from_u128(*x);
             let fmt = uuid::fmt::Hyphenated::from_uuid(uuid);
-            builder.append_value(fmt.encode_lower(&mut buffer));
+            builder
+                .append_value(fmt.encode_lower(&mut buffer))
+                .expect("Value always has 16 bytes");
         }
 
         Ok(ColumnarValue::Array(Arc::new(builder.finish())))

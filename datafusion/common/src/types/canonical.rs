@@ -15,14 +15,27 @@
 // specific language governing permissions and limitations
 // under the License.
 
-mod builtin;
-mod canonical;
-mod field;
-mod logical;
-mod native;
+use crate::types::{LogicalType, NativeType, TypeSignature};
 
-pub use builtin::*;
-pub use canonical::*;
-pub use field::*;
-pub use logical::*;
-pub use native::*;
+/// Represents the canonical [UUID extension type](https://arrow.apache.org/docs/format/CanonicalExtensions.html#uuid).
+pub struct UuidType;
+
+impl UuidType {
+    /// Creates a new [UuidType].
+    pub fn new() -> Self {
+        Self {}
+    }
+}
+
+impl LogicalType for UuidType {
+    fn native(&self) -> &NativeType {
+        &NativeType::FixedSizeBinary(16)
+    }
+
+    fn signature(&self) -> TypeSignature<'_> {
+        TypeSignature::Extension {
+            name: "arrow.uuid",
+            parameters: &[],
+        }
+    }
+}

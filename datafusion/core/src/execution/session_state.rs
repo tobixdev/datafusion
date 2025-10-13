@@ -932,6 +932,7 @@ pub struct SessionStateBuilder {
     scalar_functions: Option<Vec<Arc<ScalarUDF>>>,
     aggregate_functions: Option<Vec<Arc<AggregateUDF>>>,
     window_functions: Option<Vec<Arc<WindowUDF>>>,
+    extension_types: Option<Vec<LogicalTypeRef>>,
     serializer_registry: Option<Arc<dyn SerializerRegistry>>,
     file_formats: Option<Vec<Arc<dyn FileFormatFactory>>>,
     config: Option<SessionConfig>,
@@ -969,6 +970,7 @@ impl SessionStateBuilder {
             scalar_functions: None,
             aggregate_functions: None,
             window_functions: None,
+            extension_types: None,
             serializer_registry: None,
             file_formats: None,
             table_options: None,
@@ -1021,6 +1023,7 @@ impl SessionStateBuilder {
                 existing.aggregate_functions.into_values().collect_vec(),
             ),
             window_functions: Some(existing.window_functions.into_values().collect_vec()),
+            extension_types: Some(existing.extension_types.all_types()),
             serializer_registry: Some(existing.serializer_registry),
             file_formats: Some(existing.file_formats.into_values().collect_vec()),
             config: Some(new_config),
@@ -1407,6 +1410,7 @@ impl SessionStateBuilder {
             scalar_functions: HashMap::new(),
             aggregate_functions: HashMap::new(),
             window_functions: HashMap::new(),
+            extension_types: MemoryExtensionTypeRegistry::new(),
             serializer_registry: serializer_registry
                 .unwrap_or_else(|| Arc::new(EmptySerializerRegistry)),
             file_formats: HashMap::new(),
@@ -1452,6 +1456,15 @@ impl SessionStateBuilder {
                 let existing_udf = state.register_udwf(udwf);
                 if let Ok(Some(existing_udf)) = existing_udf {
                     debug!("Overwrote an existing UDF: {}", existing_udf.name());
+                }
+            });
+        }
+
+        if let Some(extension_types) = extension_types {
+            extension_types.into_iter().for_each(|ext_type| {
+                let existing_type = state.register_extension_type(ext_type);
+                if let Ok(Some(existing_type)) = existing_type {
+                    debug!("Overwrote an existing UDF: {}", existing_type);
                 }
             });
         }
