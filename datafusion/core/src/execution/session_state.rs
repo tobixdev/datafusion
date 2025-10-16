@@ -30,15 +30,14 @@ use crate::datasource::provider_as_source;
 use crate::execution::context::{EmptySerializerRegistry, FunctionFactory, QueryPlanner};
 use crate::execution::SessionStateDefaults;
 use crate::physical_planner::{DefaultPhysicalPlanner, PhysicalPlanner};
+use arrow::datatypes::DataType;
 use datafusion_catalog::information_schema::{
     InformationSchemaProvider, INFORMATION_SCHEMA,
 };
-
-use arrow::datatypes::DataType;
 use datafusion_catalog::MemoryCatalogProviderList;
 use datafusion_catalog::{TableFunction, TableFunctionImpl};
 use datafusion_common::alias::AliasGenerator;
-use datafusion_common::config::{ConfigExtension, ConfigOptions, TableOptions};
+use datafusion_common::config::{ConfigExtension, ConfigOptions, Dialect, TableOptions};
 use datafusion_common::display::{PlanType, StringifiedPlan, ToStringifiedPlan};
 use datafusion_common::tree_node::TreeNode;
 use datafusion_common::{
@@ -384,7 +383,7 @@ impl SessionState {
     pub fn sql_to_statement(
         &self,
         sql: &str,
-        dialect: &str,
+        dialect: &Dialect,
     ) -> datafusion_common::Result<Statement> {
         let dialect = dialect_from_str(dialect).ok_or_else(|| {
             plan_datafusion_err!(
@@ -421,7 +420,7 @@ impl SessionState {
     pub fn sql_to_expr(
         &self,
         sql: &str,
-        dialect: &str,
+        dialect: &Dialect,
     ) -> datafusion_common::Result<SQLExpr> {
         self.sql_to_expr_with_alias(sql, dialect).map(|x| x.expr)
     }
@@ -433,7 +432,7 @@ impl SessionState {
     pub fn sql_to_expr_with_alias(
         &self,
         sql: &str,
-        dialect: &str,
+        dialect: &Dialect,
     ) -> datafusion_common::Result<SQLExprWithAlias> {
         let dialect = dialect_from_str(dialect).ok_or_else(|| {
             plan_datafusion_err!(
@@ -537,8 +536,8 @@ impl SessionState {
         &self,
         sql: &str,
     ) -> datafusion_common::Result<LogicalPlan> {
-        let dialect = self.config.options().sql_parser.dialect.as_str();
-        let statement = self.sql_to_statement(sql, dialect)?;
+        let dialect = self.config.options().sql_parser.dialect;
+        let statement = self.sql_to_statement(sql, &dialect)?;
         let plan = self.statement_to_plan(statement).await?;
         Ok(plan)
     }
@@ -552,9 +551,9 @@ impl SessionState {
         sql: &str,
         df_schema: &DFSchema,
     ) -> datafusion_common::Result<Expr> {
-        let dialect = self.config.options().sql_parser.dialect.as_str();
+        let dialect = self.config.options().sql_parser.dialect;
 
-        let sql_expr = self.sql_to_expr_with_alias(sql, dialect)?;
+        let sql_expr = self.sql_to_expr_with_alias(sql, &dialect)?;
 
         let provider = SessionContextProvider {
             state: self,
@@ -2082,6 +2081,7 @@ mod tests {
     use arrow::array::{ArrayRef, Int32Array, RecordBatch, StringArray};
     use arrow::datatypes::{DataType, Field, Schema};
     use datafusion_catalog::MemoryCatalogProviderList;
+    use datafusion_common::config::Dialect;
     use datafusion_common::DFSchema;
     use datafusion_common::Result;
     use datafusion_execution::config::SessionConfig;
@@ -2107,8 +2107,8 @@ mod tests {
             let sql = "[1,2,3]";
             let schema = Schema::new(vec![Field::new("a", DataType::Int32, true)]);
             let df_schema = DFSchema::try_from(schema)?;
-            let dialect = state.config.options().sql_parser.dialect.as_str();
-            let sql_expr = state.sql_to_expr(sql, dialect)?;
+            let dialect = state.config.options().sql_parser.dialect;
+            let sql_expr = state.sql_to_expr(sql, &dialect)?;
 
             let query = SqlToRel::new_with_options(&provider, state.get_parser_options());
             query.sql_to_expr(sql_expr, &df_schema, &mut PlannerContext::new())
@@ -2266,7 +2266,8 @@ mod tests {
             }
 
             let state = &context_provider.state;
-            let statement = state.sql_to_statement("select count(*) from t", "mysql")?;
+            let statement =
+                state.sql_to_statement("select count(*) from t", &Dialect::MySQL)?;
             let plan = SqlToRel::new(&context_provider).statement_to_plan(statement)?;
             state.create_physical_plan(&plan).await
         }
