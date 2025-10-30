@@ -17,6 +17,7 @@
 
 use super::NativeType;
 use crate::error::Result;
+use crate::types::extensions::ValuePrettyPrinter;
 use arrow::datatypes::DataType;
 use core::fmt;
 use std::{cmp::Ordering, hash::Hash, sync::Arc};
@@ -87,6 +88,9 @@ pub trait LogicalType: Sync + Send {
     fn default_cast_for(&self, origin: &DataType) -> Result<DataType> {
         self.native().default_cast_for(origin)
     }
+
+    /// Returns a reference to the pretty printer for this type.
+    fn pretty_printer(&self) -> &dyn ValuePrettyPrinter;
 }
 
 impl fmt::Debug for dyn LogicalType {

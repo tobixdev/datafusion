@@ -29,6 +29,7 @@ use crate::{
     SchemaError, TableReference,
 };
 
+use crate::types::{LogicalField, LogicalFields};
 use arrow::compute::can_cast_types;
 use arrow::datatypes::{
     DataType, Field, FieldRef, Fields, Schema, SchemaBuilder, SchemaRef,
@@ -108,6 +109,8 @@ pub type DFSchemaRef = Arc<DFSchema>;
 pub struct DFSchema {
     /// Inner Arrow schema reference.
     inner: SchemaRef,
+    /// A parallel collection of [LogicalFields].
+    logical_fields: LogicalFields,
     /// Optional qualifiers for each column in this schema. In the same order as
     /// the `self.inner.fields()`
     field_qualifiers: Vec<Option<TableReference>>,
@@ -121,6 +124,7 @@ impl DFSchema {
         Self {
             inner: Arc::new(Schema::new([])),
             field_qualifiers: vec![],
+            logical_fields: LogicalFields::from_iter([]),
             functional_dependencies: FunctionalDependencies::empty(),
         }
     }
@@ -148,9 +152,11 @@ impl DFSchema {
             qualified_fields.into_iter().unzip();
 
         let schema = Arc::new(Schema::new_with_metadata(fields, metadata));
+        let logical_fields = LogicalFields::from(&schema.fields);
 
         let dfschema = Self {
             inner: schema,
+            logical_fields,
             field_qualifiers: qualifiers,
             functional_dependencies: FunctionalDependencies::empty(),
         };
@@ -165,8 +171,10 @@ impl DFSchema {
     ) -> Result<Self> {
         let field_count = fields.len();
         let schema = Arc::new(Schema::new_with_metadata(fields, metadata));
+        let logical_fields = LogicalFields::from(&schema.fields);
         let dfschema = Self {
             inner: schema,
+            logical_fields,
             field_qualifiers: vec![None; field_count],
             functional_dependencies: FunctionalDependencies::empty(),
         };
@@ -185,6 +193,7 @@ impl DFSchema {
         let qualifier = qualifier.into();
         let schema = DFSchema {
             inner: schema.clone().into(),
+            logical_fields: LogicalFields::from(&schema.fields),
             field_qualifiers: vec![Some(qualifier); schema.fields.len()],
             functional_dependencies: FunctionalDependencies::empty(),
         };
@@ -199,6 +208,7 @@ impl DFSchema {
     ) -> Result<Self> {
         let dfschema = Self {
             inner: Arc::clone(schema),
+            logical_fields: LogicalFields::from(&schema.fields),
             field_qualifiers: qualifiers,
             functional_dependencies: FunctionalDependencies::empty(),
         };
@@ -220,6 +230,7 @@ impl DFSchema {
         }
         Ok(DFSchema {
             inner: Arc::clone(&self.inner),
+            logical_fields: LogicalFields::from(&self.inner.fields),
             field_qualifiers: qualifiers,
             functional_dependencies: self.functional_dependencies.clone(),
         })
@@ -282,12 +293,14 @@ impl DFSchema {
         let mut new_metadata = self.inner.metadata.clone();
         new_metadata.extend(schema.inner.metadata.clone());
         let new_schema_with_metadata = new_schema.with_metadata(new_metadata);
+        let new_logical_fields = LogicalFields::from(&new_schema_with_metadata.fields);
 
         let mut new_qualifiers = self.field_qualifiers.clone();
         new_qualifiers.extend_from_slice(schema.field_qualifiers.as_slice());
 
         let new_self = Self {
             inner: Arc::new(new_schema_with_metadata),
+            logical_fields: new_logical_fields,
             field_qualifiers: new_qualifiers,
             functional_dependencies: FunctionalDependencies::empty(),
         };
@@ -357,6 +370,17 @@ impl DFSchema {
     /// offset within the internal `fields` vector
     pub fn field(&self, i: usize) -> &Field {
         &self.inner.fields[i]
+    }
+
+    /// Returns an immutable reference of a specific `LogicalField` instance selected using an
+    /// offset within the internal `logical_fields` vector.
+    ///
+    /// Given a [DFSchema] constructed with access to the DataFusion type registry, the logical
+    /// field will provide access to extension type information. If the [DFSchema] was constructed
+    /// without access to the extension type registry, the logical field will use the physical
+    /// data type of the regular field.
+    pub fn logical_field(&self, i: usize) -> &LogicalField {
+        &self.logical_fields[i]
     }
 
     /// Returns an immutable reference of a specific `Field` instance selected using an
@@ -838,6 +862,7 @@ impl DFSchema {
         DFSchema {
             field_qualifiers: vec![None; self.inner.fields.len()],
             inner: self.inner,
+            logical_fields: self.logical_fields,
             functional_dependencies: self.functional_dependencies,
         }
     }
@@ -848,6 +873,7 @@ impl DFSchema {
         DFSchema {
             field_qualifiers: vec![Some(qualifier); self.inner.fields.len()],
             inner: self.inner,
+            logical_fields: self.logical_fields,
             functional_dependencies: self.functional_dependencies,
         }
     }
@@ -1113,8 +1139,10 @@ impl TryFrom<SchemaRef> for DFSchema {
     type Error = DataFusionError;
     fn try_from(schema: SchemaRef) -> Result<Self, Self::Error> {
         let field_count = schema.fields.len();
+        let logical_fields = LogicalFields::from(&schema.fields);
         let dfschema = Self {
             inner: schema,
+            logical_fields,
             field_qualifiers: vec![None; field_count],
             functional_dependencies: FunctionalDependencies::empty(),
         };
@@ -1168,8 +1196,10 @@ impl ToDFSchema for Vec<Field> {
             fields: self.into(),
             metadata: HashMap::new(),
         };
+        let logical_fields = LogicalFields::from(&schema.fields);
         let dfschema = DFSchema {
             inner: schema.into(),
+            logical_fields,
             field_qualifiers: vec![None; field_count],
             functional_dependencies: FunctionalDependencies::empty(),
         };
@@ -1555,6 +1585,7 @@ mod tests {
 
         let df_schema = DFSchema {
             inner: Arc::clone(&arrow_schema_ref),
+            logical_fields: LogicalFields::from(&arrow_schema_ref.fields),
             field_qualifiers: vec![None; arrow_schema_ref.fields.len()],
             functional_dependencies: FunctionalDependencies::empty(),
         };
@@ -1602,6 +1633,7 @@ mod tests {
         let df_schema = DFSchema {
             inner: Arc::clone(&schema),
             field_qualifiers: vec![None; schema.fields.len()],
+            logical_fields: LogicalFields::from(&schema.fields),
             functional_dependencies: FunctionalDependencies::empty(),
         };
 

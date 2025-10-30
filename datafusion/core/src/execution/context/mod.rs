@@ -89,7 +89,7 @@ use datafusion_session::SessionStore;
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use datafusion_common::types::LogicalTypeRef;
-use datafusion_expr::registry::ExtensionTypeRegistry;
+use datafusion_expr::registry::LogicalTypeRegistry;
 use object_store::ObjectStore;
 use parking_lot::RwLock;
 use url::Url;
@@ -1756,23 +1756,23 @@ impl FunctionRegistry for SessionContext {
     }
 }
 
-impl ExtensionTypeRegistry for SessionContext {
-    fn get_extension_type(&self, name: &str) -> Result<LogicalTypeRef> {
-        self.state.read().get_extension_type(name)
+impl LogicalTypeRegistry for SessionContext {
+    fn get_logical_type(&self, name: &str) -> Result<LogicalTypeRef> {
+        self.state.read().get_logical_type(name)
     }
 
-    fn register_extension_type(
+    fn register_logical_type(
         &mut self,
         logical_type: LogicalTypeRef,
     ) -> Result<Option<LogicalTypeRef>> {
-        self.state.write().register_extension_type(logical_type)
+        self.state.write().register_logical_type(logical_type)
     }
 
-    fn deregister_extension_type(
+    fn deregister_logical_type(
         &mut self,
         name: &str,
     ) -> Result<Option<LogicalTypeRef>> {
-        self.state.write().deregister_extension_type(name)
+        self.state.write().deregister_logical_type(name)
     }
 }
 

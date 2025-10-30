@@ -19,14 +19,13 @@ use std::any::Any;
 use std::sync::Arc;
 
 use arrow::array::FixedSizeBinaryBuilder;
+use arrow::datatypes::DataType;
 use arrow::datatypes::DataType::Utf8;
-use arrow::datatypes::{DataType, Field, FieldRef};
 use rand::Rng;
 use uuid::Uuid;
 
 use datafusion_common::{internal_err, Result};
-use datafusion_common::types::UuidType;
-use datafusion_expr::{ColumnarValue, Documentation, ReturnFieldArgs, Volatility};
+use datafusion_expr::{ColumnarValue, Documentation, Volatility};
 use datafusion_expr::{ScalarFunctionArgs, ScalarUDFImpl, Signature};
 use datafusion_macros::user_doc;
 
@@ -76,12 +75,7 @@ impl ScalarUDFImpl for UuidFunc {
     }
 
     fn return_type(&self, _arg_types: &[DataType]) -> Result<DataType> {
-        unreachable!("return_field_from_args is overwritten")
-    }
-
-    fn return_field_from_args(&self, _args: ReturnFieldArgs) -> Result<FieldRef> {
-        // TODO: pass-in the registry
-        Ok(Arc::new(Field::new("output", Utf8, false).with_extension_type(UuidType::new())))
+        Ok(Utf8)
     }
 
     /// Prints random (v4) uuid values per row

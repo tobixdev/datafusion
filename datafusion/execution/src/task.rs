@@ -22,7 +22,7 @@ use crate::{
 use datafusion_common::types::LogicalTypeRef;
 use datafusion_common::{internal_datafusion_err, plan_datafusion_err, Result};
 use datafusion_expr::planner::ExprPlanner;
-use datafusion_expr::registry::{ExtensionTypeRegistry, MemoryExtensionTypeRegistry};
+use datafusion_expr::registry::{LogicalTypeRegistry, MemoryLogicalTypeRegistry};
 use datafusion_expr::{AggregateUDF, ScalarUDF, WindowUDF};
 use std::collections::HashSet;
 use std::{collections::HashMap, sync::Arc};
@@ -49,7 +49,7 @@ pub struct TaskContext {
     /// Window functions associated with this task context
     window_functions: HashMap<String, Arc<WindowUDF>>,
     /// Extension types associated with this task context
-    extension_types: MemoryExtensionTypeRegistry,
+    extension_types: MemoryLogicalTypeRegistry,
     /// Runtime environment associated with this task context
     runtime: Arc<RuntimeEnv>,
 }
@@ -66,7 +66,7 @@ impl Default for TaskContext {
             scalar_functions: HashMap::new(),
             aggregate_functions: HashMap::new(),
             window_functions: HashMap::new(),
-            extension_types: MemoryExtensionTypeRegistry::new(),
+            extension_types: MemoryLogicalTypeRegistry::new(),
             runtime,
         }
     }
@@ -85,7 +85,7 @@ impl TaskContext {
         scalar_functions: HashMap<String, Arc<ScalarUDF>>,
         aggregate_functions: HashMap<String, Arc<AggregateUDF>>,
         window_functions: HashMap<String, Arc<WindowUDF>>,
-        extension_types: MemoryExtensionTypeRegistry,
+        extension_types: MemoryLogicalTypeRegistry,
         runtime: Arc<RuntimeEnv>,
     ) -> Self {
         Self {
@@ -218,23 +218,23 @@ impl FunctionRegistry for TaskContext {
     }
 }
 
-impl ExtensionTypeRegistry for TaskContext {
-    fn get_extension_type(&self, name: &str) -> Result<LogicalTypeRef> {
-        self.extension_types.get_extension_type(name)
+impl LogicalTypeRegistry for TaskContext {
+    fn get_logical_type(&self, name: &str) -> Result<LogicalTypeRef> {
+        self.extension_types.get_logical_type(name)
     }
 
-    fn register_extension_type(
+    fn register_logical_type(
         &mut self,
         logical_type: LogicalTypeRef,
     ) -> Result<Option<LogicalTypeRef>> {
-        self.extension_types.register_extension_type(logical_type)
+        self.extension_types.register_logical_type(logical_type)
     }
 
-    fn deregister_extension_type(
+    fn deregister_logical_type(
         &mut self,
         name: &str,
     ) -> Result<Option<LogicalTypeRef>> {
-        self.extension_types.deregister_extension_type(name)
+        self.extension_types.deregister_logical_type(name)
     }
 }
 
@@ -275,7 +275,7 @@ mod tests {
             HashMap::default(),
             HashMap::default(),
             HashMap::default(),
-            MemoryExtensionTypeRegistry::new(),
+            MemoryLogicalTypeRegistry::new(),
             runtime,
         );
 
@@ -308,7 +308,7 @@ mod tests {
             HashMap::default(),
             HashMap::default(),
             HashMap::default(),
-            MemoryExtensionTypeRegistry::new(),
+            MemoryLogicalTypeRegistry::new(),
             runtime,
         );
 

@@ -16,10 +16,11 @@
 // under the License.
 
 use super::{
-    LogicalField, LogicalFieldRef, LogicalFields, LogicalType, LogicalUnionFields,
-    TypeSignature,
+    DefaultValuePrettyPrinter, LogicalField, LogicalFieldRef, LogicalFields, LogicalType,
+    LogicalUnionFields, TypeSignature,
 };
 use crate::error::{Result, _internal_err};
+use crate::types::extensions::ValuePrettyPrinter;
 use arrow::compute::can_cast_types;
 use arrow::datatypes::{
     DataType, Field, FieldRef, Fields, IntervalUnit, TimeUnit, UnionFields,
@@ -367,6 +368,11 @@ impl LogicalType for NativeType {
                 )
             }
         })
+    }
+
+    fn pretty_printer(&self) -> &dyn ValuePrettyPrinter {
+        static PRETTY_PRINTER: DefaultValuePrettyPrinter = DefaultValuePrettyPrinter {};
+        &PRETTY_PRINTER
     }
 }
 

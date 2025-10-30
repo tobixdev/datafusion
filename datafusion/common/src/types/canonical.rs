@@ -15,7 +15,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
-use crate::types::{LogicalType, NativeType, TypeSignature};
+use crate::types::{LogicalType, NativeType, TypeSignature, ValuePrettyPrinter};
 
 /// Represents the canonical [UUID extension type](https://arrow.apache.org/docs/format/CanonicalExtensions.html#uuid).
 pub struct UuidType;
@@ -37,5 +37,9 @@ impl LogicalType for UuidType {
             name: "arrow.uuid",
             parameters: &[],
         }
+    }
+
+    fn pretty_printer(&self) -> &dyn ValuePrettyPrinter {
+        todo!("UUID printer not implemented")
     }
 }
