@@ -17,6 +17,7 @@
 
 mod builtin;
 mod canonical;
+mod dftype;
 mod extensions;
 mod field;
 mod logical;
@@ -24,6 +25,7 @@ mod native;
 
 pub use builtin::*;
 pub use canonical::*;
+pub use dftype::*;
 pub use extensions::*;
 pub use field::*;
 pub use logical::*;

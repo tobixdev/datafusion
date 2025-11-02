@@ -48,6 +48,7 @@ use sqlparser::ast::{
 // Moved in 51.0.0 to datafusion_common
 pub use datafusion_common::metadata::FieldMetadata;
 use datafusion_common::metadata::ScalarAndMetadata;
+use datafusion_common::types::{DFType, DFTypedScalarValue};
 
 // This mirrors sqlparser::ast::NullTreatment but we need our own variant
 // for when the sql feature is disabled.
@@ -3515,9 +3516,11 @@ mod test {
         ColumnarValue, ScalarFunctionArgs, ScalarUDF, ScalarUDFImpl, Volatility,
     };
     use arrow::datatypes::{Field, Schema};
+    use datafusion_common::types::{DFType, UuidType};
     use sqlparser::ast;
     use sqlparser::ast::{Ident, IdentWithAlias};
     use std::any::Any;
+    use uuid::Uuid;
 
     #[test]
     fn infer_placeholder_in_clause() {
@@ -3888,6 +3891,54 @@ mod test {
             ),
             "* RENAME (c1 AS a1)"
         )
+    }
+
+    #[test]
+    fn test_display_literal_with_extension_type() {
+        assert!(false)
+        // let uuid_type =
+        //     DFType::try_new(DataType::FixedSizeBinary(16), Arc::new(UuidType::new()))
+        //         .unwrap();
+        // assert_eq!(
+        //     format!(
+        //         "{}",
+        //         Expr::Literal(
+        //             DFTypedScalarValue::try_new(
+        //                 ScalarValue::FixedSizeBinary(
+        //                     16,
+        //                     Some(Uuid::nil().as_bytes().to_vec())
+        //                 ),
+        //                 uuid_type
+        //             )
+        //             .unwrap()
+        //         )
+        //     ),
+        //     "TODO"
+        // )
+    }
+
+    #[test]
+    fn test_display_literal_with_unknown_extension_type() {
+        assert!(false)
+        // let uuid_type =
+        //     DFType::try_new(DataType::FixedSizeBinary(16), Arc::new(UuidType::new()))
+        //         .unwrap();
+        // assert_eq!(
+        //     format!(
+        //         "{}",
+        //         Expr::Literal(
+        //             DFTypedScalarValue::try_new(
+        //                 ScalarValue::FixedSizeBinary(
+        //                     16,
+        //                     Some(Uuid::nil().as_bytes().to_vec())
+        //                 ),
+        //                 uuid_type
+        //             )
+        //             .unwrap()
+        //         )
+        //     ),
+        //     "TODO"
+        // )
     }
 
     #[test]

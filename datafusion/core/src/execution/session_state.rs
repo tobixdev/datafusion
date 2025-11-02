@@ -53,7 +53,7 @@ use datafusion_expr::planner::ExprPlanner;
 #[cfg(feature = "sql")]
 use datafusion_expr::planner::TypePlanner;
 use datafusion_expr::registry::{
-    LogicalTypeRegistry, FunctionRegistry, MemoryLogicalTypeRegistry,
+    FunctionRegistry, LogicalTypeRegistry, MemoryExtensionTypeRegistry,
     SerializerRegistry,
 };
 use datafusion_expr::simplify::SimplifyInfo;
@@ -161,7 +161,7 @@ pub struct SessionState {
     /// Window functions registered in the context
     window_functions: HashMap<String, Arc<WindowUDF>>,
     /// Logical types registered in the context
-    logical_types: MemoryLogicalTypeRegistry,
+    logical_types: MemoryExtensionTypeRegistry,
     /// Deserializer registry for extensions.
     serializer_registry: Arc<dyn SerializerRegistry>,
     /// Holds registered external FileFormat implementations
@@ -265,7 +265,7 @@ impl Session for SessionState {
         &self.window_functions
     }
 
-    fn extension_types(&self) -> &MemoryLogicalTypeRegistry {
+    fn extension_types(&self) -> &MemoryExtensionTypeRegistry {
         &self.logical_types
     }
 
@@ -1022,7 +1022,7 @@ impl SessionStateBuilder {
                 existing.aggregate_functions.into_values().collect_vec(),
             ),
             window_functions: Some(existing.window_functions.into_values().collect_vec()),
-            extension_types: Some(existing.logical_types.all_types()),
+            extension_types: Some(existing.logical_types.all_extension_types()),
             serializer_registry: Some(existing.serializer_registry),
             file_formats: Some(existing.file_formats.into_values().collect_vec()),
             config: Some(new_config),
@@ -1409,7 +1409,7 @@ impl SessionStateBuilder {
             scalar_functions: HashMap::new(),
             aggregate_functions: HashMap::new(),
             window_functions: HashMap::new(),
-            logical_types: MemoryLogicalTypeRegistry::new(),
+            logical_types: MemoryExtensionTypeRegistry::new(),
             serializer_registry: serializer_registry
                 .unwrap_or_else(|| Arc::new(EmptySerializerRegistry)),
             file_formats: HashMap::new(),
@@ -1480,7 +1480,7 @@ impl SessionStateBuilder {
 
         if let Some(extension_types) = extension_types {
             extension_types.into_iter().for_each(|ext_type| {
-                let existing_type = state.register_logical_type(ext_type);
+                let existing_type = state.register_extension_type(ext_type);
                 if let Ok(Some(existing_type)) = existing_type {
                     debug!("Overwrote an existing logical type: {existing_type}");
                 }
@@ -1970,25 +1970,22 @@ impl FunctionRegistry for SessionState {
 }
 
 impl LogicalTypeRegistry for SessionState {
-    fn get_logical_type(
-        &self,
-        name: &str,
-    ) -> datafusion_common::Result<LogicalTypeRef> {
-        self.logical_types.get_logical_type(name)
+    fn extension_type(&self, name: &str) -> datafusion_common::Result<LogicalTypeRef> {
+        self.logical_types.extension_type(name)
     }
 
-    fn register_logical_type(
+    fn register_extension_type(
         &mut self,
         logical_type: LogicalTypeRef,
     ) -> datafusion_common::Result<Option<LogicalTypeRef>> {
-        self.logical_types.register_logical_type(logical_type)
+        self.logical_types.register_extension_type(logical_type)
     }
 
-    fn deregister_logical_type(
+    fn deregister_extension_type(
         &mut self,
         name: &str,
     ) -> datafusion_common::Result<Option<LogicalTypeRef>> {
-        self.logical_types.deregister_logical_type(name)
+        self.logical_types.deregister_extension_type(name)
     }
 }
 

@@ -27,6 +27,12 @@ impl UuidType {
     }
 }
 
+impl Default for UuidType {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl LogicalType for UuidType {
     fn native(&self) -> &NativeType {
         &NativeType::FixedSizeBinary(16)
@@ -41,5 +47,39 @@ impl LogicalType for UuidType {
 
     fn pretty_printer(&self) -> &dyn ValuePrettyPrinter {
         todo!("UUID printer not implemented")
+    }
+}
+
+/// Represents an unknown extension type with a given native type and name.
+///
+/// TODO
+pub struct UnknownExtensionType {
+    /// The underlying native type.
+    native_type: NativeType,
+    /// The name of the underlying extension type.
+    name: String,
+}
+
+impl UnknownExtensionType {
+    /// Creates a new [UnknownExtensionType].
+    pub fn new(name: String, native_type: NativeType) -> Self {
+        Self { name, native_type }
+    }
+}
+
+impl LogicalType for UnknownExtensionType {
+    fn native(&self) -> &NativeType {
+        &self.native_type
+    }
+
+    fn signature(&self) -> TypeSignature<'_> {
+        TypeSignature::Extension {
+            name: &self.name,
+            parameters: &[],
+        }
+    }
+
+    fn pretty_printer(&self) -> &dyn ValuePrettyPrinter {
+        todo!()
     }
 }

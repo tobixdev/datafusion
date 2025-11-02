@@ -1791,22 +1791,22 @@ impl FunctionRegistry for SessionContext {
 }
 
 impl LogicalTypeRegistry for SessionContext {
-    fn get_logical_type(&self, name: &str) -> Result<LogicalTypeRef> {
-        self.state.read().get_logical_type(name)
+    fn extension_type(&self, name: &str) -> Result<LogicalTypeRef> {
+        self.state.read().extension_type(name)
     }
 
-    fn register_logical_type(
+    fn register_extension_type(
         &mut self,
         logical_type: LogicalTypeRef,
     ) -> Result<Option<LogicalTypeRef>> {
-        self.state.write().register_logical_type(logical_type)
+        self.state.write().register_extension_type(logical_type)
     }
 
-    fn deregister_logical_type(
+    fn deregister_extension_type(
         &mut self,
         name: &str,
     ) -> Result<Option<LogicalTypeRef>> {
-        self.state.write().deregister_logical_type(name)
+        self.state.write().deregister_extension_type(name)
     }
 }
 

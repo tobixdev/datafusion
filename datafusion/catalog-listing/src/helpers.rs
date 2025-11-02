@@ -552,7 +552,7 @@ mod tests {
     use std::ops::Not;
 
     use super::*;
-    use datafusion_expr::registry::MemoryLogicalTypeRegistry;
+    use datafusion_expr::registry::MemoryExtensionTypeRegistry;
     use datafusion_expr::{
         case, col, lit, AggregateUDF, Expr, LogicalPlan, ScalarUDF, WindowUDF,
     };
@@ -1075,7 +1075,7 @@ mod tests {
             unimplemented!()
         }
 
-        fn extension_types(&self) -> &MemoryLogicalTypeRegistry {
+        fn extension_types(&self) -> &MemoryExtensionTypeRegistry {
             unimplemented!()
         }
 
