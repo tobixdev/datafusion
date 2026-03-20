@@ -233,7 +233,7 @@ impl DisplayIndex for TemperatureDisplayIndex<'_> {
             TemperatureUnit::Kelvin => "K",
         };
 
-        write!(f, "{:.2} {}", value, suffix)?;
+        write!(f, "{value:.2} {suffix}")?;
 
         Ok(())
     }
