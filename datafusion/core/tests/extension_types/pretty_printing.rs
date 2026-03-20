@@ -22,6 +22,7 @@ use datafusion::dataframe::DataFrame;
 use datafusion::error::Result;
 use datafusion::execution::SessionStateBuilder;
 use datafusion::prelude::SessionContext;
+use datafusion_expr::registry::MemoryExtensionTypeRegistry;
 use insta::assert_snapshot;
 use std::sync::Arc;
 
@@ -46,7 +47,9 @@ async fn create_test_table() -> Result<DataFrame> {
     )?;
 
     let state = SessionStateBuilder::default()
-        .with_canonical_extension_types()?
+        .with_extension_type_registry(Arc::new(
+            MemoryExtensionTypeRegistry::new_with_canonical_extension_types(),
+        ))
         .build();
     let ctx = SessionContext::new_with_state(state);
 
