@@ -387,17 +387,32 @@ pub struct MemoryExtensionTypeRegistry {
 
 impl Default for MemoryExtensionTypeRegistry {
     fn default() -> Self {
-        MemoryExtensionTypeRegistry {
-            extension_types: Arc::new(RwLock::new(HashMap::new())),
-        }
+        Self::new_empty()
     }
 }
 
 impl MemoryExtensionTypeRegistry {
     /// Creates an empty [MemoryExtensionTypeRegistry].
-    pub fn new() -> Self {
+    pub fn new_empty() -> Self {
         Self {
             extension_types: Arc::new(RwLock::new(HashMap::new())),
+        }
+    }
+
+    /// Pre-registers the [canonical extension types](https://arrow.apache.org/docs/format/CanonicalExtensions.html)
+    /// in the extension type registry.
+    pub fn new_with_canonical_extension_types() -> Self {
+        let mapping = [DefaultExtensionTypeRegistration::new_arc(|_| {
+            Ok(arrow_schema::extension::Uuid {})
+        })];
+
+        let mut extension_types = HashMap::new();
+        for registration in mapping.into_iter() {
+            extension_types.insert(registration.type_name().to_owned(), registration);
+        }
+
+        Self {
+            extension_types: Arc::new(RwLock::new(HashMap::from(extension_types))),
         }
     }
 

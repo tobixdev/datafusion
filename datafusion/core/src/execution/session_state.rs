@@ -27,14 +27,14 @@ use crate::catalog::{CatalogProviderList, SchemaProvider, TableProviderFactory};
 use crate::datasource::file_format::FileFormatFactory;
 #[cfg(feature = "sql")]
 use crate::datasource::provider_as_source;
-use crate::execution::SessionStateDefaults;
 use crate::execution::context::{EmptySerializerRegistry, FunctionFactory, QueryPlanner};
+use crate::execution::SessionStateDefaults;
 use crate::physical_planner::{DefaultPhysicalPlanner, PhysicalPlanner};
 use arrow_schema::{DataType, FieldRef};
-use datafusion_catalog::MemoryCatalogProviderList;
 use datafusion_catalog::information_schema::{
-    INFORMATION_SCHEMA, InformationSchemaProvider,
+    InformationSchemaProvider, INFORMATION_SCHEMA,
 };
+use datafusion_catalog::MemoryCatalogProviderList;
 use datafusion_catalog::{TableFunction, TableFunctionImpl};
 use datafusion_common::alias::AliasGenerator;
 #[cfg(feature = "sql")]
@@ -43,25 +43,24 @@ use datafusion_common::config::{ConfigExtension, ConfigOptions, TableOptions};
 use datafusion_common::display::{PlanType, StringifiedPlan, ToStringifiedPlan};
 use datafusion_common::tree_node::TreeNode;
 use datafusion_common::{
-    DFSchema, DataFusionError, ResolvedTableReference, TableReference, config_err,
-    exec_err, plan_datafusion_err,
+    config_err, exec_err, plan_datafusion_err, DFSchema, DataFusionError,
+    ResolvedTableReference, TableReference,
 };
-use datafusion_execution::TaskContext;
 use datafusion_execution::config::SessionConfig;
 use datafusion_execution::runtime_env::RuntimeEnv;
-#[cfg(feature = "sql")]
-use datafusion_expr::TableSource;
+use datafusion_execution::TaskContext;
 use datafusion_expr::execution_props::ExecutionProps;
 use datafusion_expr::expr_rewriter::FunctionRewrite;
 use datafusion_expr::planner::ExprPlanner;
 #[cfg(feature = "sql")]
 use datafusion_expr::planner::{RelationPlanner, TypePlanner};
 use datafusion_expr::registry::{
-    DefaultExtensionTypeRegistration, ExtensionTypeRegistration,
-    ExtensionTypeRegistrationRef, ExtensionTypeRegistry, ExtensionTypeRegistryRef,
-    FunctionRegistry, MemoryExtensionTypeRegistry, SerializerRegistry,
+    ExtensionTypeRegistryRef, FunctionRegistry, MemoryExtensionTypeRegistry,
+    SerializerRegistry,
 };
 use datafusion_expr::simplify::SimplifyContext;
+#[cfg(feature = "sql")]
+use datafusion_expr::TableSource;
 use datafusion_expr::{AggregateUDF, Explain, Expr, LogicalPlan, ScalarUDF, WindowUDF};
 use datafusion_optimizer::simplify_expressions::ExprSimplifier;
 use datafusion_optimizer::{
@@ -69,8 +68,8 @@ use datafusion_optimizer::{
 };
 use datafusion_physical_expr::create_physical_expr;
 use datafusion_physical_expr_common::physical_expr::PhysicalExpr;
-use datafusion_physical_optimizer::PhysicalOptimizerRule;
 use datafusion_physical_optimizer::optimizer::PhysicalOptimizer;
+use datafusion_physical_optimizer::PhysicalOptimizerRule;
 use datafusion_physical_plan::ExecutionPlan;
 use datafusion_session::Session;
 #[cfg(feature = "sql")]
@@ -1140,7 +1139,7 @@ impl SessionStateBuilder {
             .extend(SessionStateDefaults::default_window_functions());
 
         self.extension_types
-            .get_or_insert_with(|| Arc::new(MemoryExtensionTypeRegistry::new()))
+            .get_or_insert_with(|| Arc::new(MemoryExtensionTypeRegistry::new_empty()))
             .extend(&SessionStateDefaults::default_extension_types())
             .expect("MemoryExtensionTypeRegistry is not read-only.");
 
@@ -1341,35 +1340,6 @@ impl SessionStateBuilder {
     ) -> Self {
         self.extension_types = Some(registry);
         self
-    }
-
-    /// Registers [canonical extension types](https://arrow.apache.org/docs/format/CanonicalExtensions.html)
-    /// in DataFusion's extension type registry. For more information see [`ExtensionTypeRegistry`].
-    ///
-    /// # Errors
-    ///
-    /// May fail if an already registered [`ExtensionTypeRegistry`] raises an error while
-    /// registering the canonical extension types.
-    pub fn with_canonical_extension_types(mut self) -> datafusion_common::Result<Self> {
-        let uuid = DefaultExtensionTypeRegistration::new_arc(|_| {
-            Ok(arrow_schema::extension::Uuid {})
-        });
-        let canonical_extension_types = vec![uuid];
-
-        match &self.extension_types {
-            None => {
-                let registry = Arc::new(MemoryExtensionTypeRegistry::new());
-                registry
-                    .extend(&canonical_extension_types)
-                    .expect("Adding valid extension types to MemoryExtensionTypeRegistry always succeeds.");
-                self.extension_types = Some(registry);
-            }
-            Some(registry) => {
-                registry.extend(&canonical_extension_types)?;
-            }
-        }
-
-        Ok(self)
     }
 
     /// Set the [`SerializerRegistry`]
@@ -1944,7 +1914,7 @@ impl ContextProvider for SessionContextProvider<'_> {
     }
 
     fn get_variable_type(&self, variable_names: &[String]) -> Option<DataType> {
-        use datafusion_expr::var_provider::{VarType, is_system_variables};
+        use datafusion_expr::var_provider::{is_system_variables, VarType};
 
         if variable_names.is_empty() {
             return None;
@@ -2133,35 +2103,6 @@ impl datafusion_execution::TaskContextProvider for SessionState {
     }
 }
 
-impl ExtensionTypeRegistry for SessionState {
-    fn extension_type_registration(
-        &self,
-        name: &str,
-    ) -> datafusion_common::Result<ExtensionTypeRegistrationRef> {
-        self.extension_types.extension_type_registration(name)
-    }
-
-    fn extension_type_registrations(&self) -> Vec<Arc<dyn ExtensionTypeRegistration>> {
-        self.extension_types.extension_type_registrations()
-    }
-
-    fn add_extension_type_registration(
-        &self,
-        extension_type: ExtensionTypeRegistrationRef,
-    ) -> datafusion_common::Result<Option<ExtensionTypeRegistrationRef>> {
-        self.extension_types
-            .add_extension_type_registration(extension_type)
-    }
-
-    fn remove_extension_type_registration(
-        &self,
-        name: &str,
-    ) -> datafusion_common::Result<Option<ExtensionTypeRegistrationRef>> {
-        self.extension_types
-            .remove_extension_type_registration(name)
-    }
-}
-
 impl OptimizerConfig for SessionState {
     fn query_execution_start_time(&self) -> Option<DateTime<Utc>> {
         self.execution_props.query_execution_start_time
@@ -2241,9 +2182,9 @@ mod tests {
     use super::{SessionContextProvider, SessionStateBuilder};
     use crate::common::assert_contains;
     use crate::config::ConfigOptions;
-    use crate::datasource::MemTable;
     use crate::datasource::empty::EmptyTable;
     use crate::datasource::provider_as_source;
+    use crate::datasource::MemTable;
     use crate::execution::context::SessionState;
     use crate::logical_expr::planner::ExprPlanner;
     use crate::logical_expr::{AggregateUDF, ScalarUDF, TableSource, WindowUDF};
@@ -2253,13 +2194,13 @@ mod tests {
     use arrow::array::{ArrayRef, Int32Array, RecordBatch, StringArray};
     use arrow::datatypes::{DataType, Field, Schema};
     use datafusion_catalog::MemoryCatalogProviderList;
+    use datafusion_common::config::Dialect;
     use datafusion_common::DFSchema;
     use datafusion_common::Result;
-    use datafusion_common::config::Dialect;
     use datafusion_execution::config::SessionConfig;
     use datafusion_expr::Expr;
-    use datafusion_optimizer::Optimizer;
     use datafusion_optimizer::optimizer::OptimizerRule;
+    use datafusion_optimizer::Optimizer;
     use datafusion_physical_plan::display::DisplayableExecutionPlan;
     use datafusion_sql::planner::{PlannerContext, SqlToRel};
     use std::collections::HashMap;

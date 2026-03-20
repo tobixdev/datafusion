@@ -21,16 +21,16 @@
 //!
 //! ## Usage
 //! ```bash
-//! cargo run --example extension_types -- [all|event_id]
+//! cargo run --example extension_types -- [all|temperature]
 //! ```
 //!
 //! Each subcommand runs a corresponding example:
 //! - `all` — run all examples included in this module
 //!
-//! - `event_id`
-//!   (file: event_id.rs, desc: A custom wrapper around integers that represent event ids)
+//! - `temperature`
+//!   (file: temperature.rs, desc: Extension type for temperature data.)
 
-mod event_id;
+mod temperature;
 
 use datafusion::error::{DataFusionError, Result};
 use strum::{IntoEnumIterator, VariantNames};
@@ -40,7 +40,7 @@ use strum_macros::{Display, EnumIter, EnumString, VariantNames};
 #[strum(serialize_all = "snake_case")]
 enum ExampleKind {
     All,
-    EventId,
+    Temperature,
 }
 
 impl ExampleKind {
@@ -58,8 +58,8 @@ impl ExampleKind {
                     Box::pin(example.run()).await?;
                 }
             }
-            ExampleKind::EventId => {
-                event_id::event_id_example().await?;
+            ExampleKind::Temperature => {
+                temperature::temperature_example().await?;
             }
         }
         Ok(())
