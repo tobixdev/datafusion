@@ -231,13 +231,12 @@ pub type ExtensionTypeRegistrationRef = Arc<dyn ExtensionTypeRegistration>;
 /// A good question is why this trait is even necessary. Why not directly register the
 /// [`DFExtensionType`] in a registration?
 ///
-/// While this works for extension types without parameters (e.g., `arrow.uuid`), it does not work
-/// for more complex extension types that may have another extension type as a parameter. For
-/// example, consider an extension type `custom.shortened(n)` that aims to short the pretty-printing
-/// string to `n` characters. Here, `n` is a parameter of the extension type and should be a field
-/// in the concrete struct that implements the [`DFExtensionType`]. The job of the registration is
-/// to read the metadata from the field and create the corresponding [`DFExtensionType`] instance
-/// with the correct `n` set.
+/// While this works for extension types requiring no additional metadata (e.g., `arrow.uuid`), it
+/// does not work for more complex extension types with metadata. For example, consider an extension
+/// type `custom.shortened(n)` that aims to short the pretty-printing string to `n` characters.
+/// Here, `n` is a parameter of the extension type and should be a field in the struct that
+/// implements the [`DFExtensionType`]. The job of the registration is to read the metadata from the
+/// field and create the corresponding [`DFExtensionType`] instance with the correct `n` set.
 ///
 /// The [`DefaultExtensionTypeRegistration`] provides a convenient way of creating registrations.
 pub trait ExtensionTypeRegistration: Debug + Send + Sync {

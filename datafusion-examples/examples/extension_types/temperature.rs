@@ -32,7 +32,7 @@ use std::fmt::Write;
 use std::sync::Arc;
 
 /// This example demonstrates using DataFusion's extension type API to create a custom
-/// semantic type [`TemperatureExtensionType`].
+/// extension type [`TemperatureExtensionType`] for representing different temperature units.
 pub async fn temperature_example() -> Result<()> {
     let ctx = create_session_context()?;
     register_temperature_table(&ctx).await?;
@@ -65,8 +65,7 @@ async fn register_temperature_table(ctx: &SessionContext) -> Result<DataFrame> {
         "Vienna", "Tokyo", "New York", "Sydney",
     ]));
 
-    // We'll use the same raw float values across columns to show how the
-    // extension type changes the formatting behavior.
+    // The temperature readings in different units
     let celsius_temps = vec![15.1, 22.5, 18.98, 25.0];
     let fahrenheit_temps = vec![59.18, 72.5, 66.164, 77.0];
     let kelvin_temps = vec![288.25, 295.65, 292.13, 298.15];
@@ -127,6 +126,8 @@ pub enum TemperatureUnit {
 pub struct TemperatureExtensionType(TemperatureUnit);
 
 /// Implementation of [`ExtensionType`] for [`TemperatureExtensionType`].
+///
+/// This implements the arrow-rs trait for reading, writing, and validating extension types.
 impl ExtensionType for TemperatureExtensionType {
     /// Arrow extension type name that is stored in the `ARROW:extension:name` field.
     const NAME: &'static str = "custom.temperature";
@@ -136,8 +137,8 @@ impl ExtensionType for TemperatureExtensionType {
         &self.0
     }
 
-    /// Arrow extension type metadata is encoded as a string and stored in the
-    /// `ARROW:extension:metadata` field. As we only store the name of the unit, a simple string
+    /// Arrow extension type metadata is encoded as a string and stored using the
+    /// `ARROW:extension:metadata` key. As we only store the name of the unit, a simple string
     /// suffices. Extension types can store more complex metadata using serialization formats like
     /// JSON.
     fn serialize_metadata(&self) -> Option<String> {
@@ -149,6 +150,8 @@ impl ExtensionType for TemperatureExtensionType {
         Some(s.to_string())
     }
 
+    /// Inverse operation of [`Self::serialize_metadata`]. This creates the [`TemperatureUnit`]
+    /// value from the serialized string.
     fn deserialize_metadata(
         metadata: Option<&str>,
     ) -> std::result::Result<Self::Metadata, ArrowError> {
@@ -165,6 +168,7 @@ impl ExtensionType for TemperatureExtensionType {
         }
     }
 
+    /// Checks that the extension type supports a given [`DataType`].
     fn supports_data_type(
         &self,
         data_type: &DataType,
@@ -188,6 +192,8 @@ impl ExtensionType for TemperatureExtensionType {
 }
 
 /// Implementation of [`DFExtensionType`] for [`TemperatureExtensionType`].
+///
+/// This implements the trait for customizing DataFusion.
 impl DFExtensionType for TemperatureExtensionType {
     fn create_array_formatter<'fmt>(
         &self,
