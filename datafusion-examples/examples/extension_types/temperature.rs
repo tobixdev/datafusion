@@ -52,7 +52,10 @@ fn create_session_context() -> Result<SessionContext> {
     // The registration creates a new instance of the extension type with the deserialized metadata.
     let temp_registration =
         DefaultExtensionTypeRegistration::new_arc(|storage_type, metadata| {
-            Ok(TemperatureExtensionType(storage_type.clone(), metadata))
+            Ok(TemperatureExtensionType::new(
+                storage_type.clone(),
+                metadata,
+            ))
         });
     registry.add_extension_type_registration(temp_registration)?;
 
@@ -94,13 +97,13 @@ fn example_schema() -> SchemaRef {
     Arc::new(Schema::new(vec![
         Field::new("city", DataType::Utf8, false),
         Field::new("celsius", DataType::Float64, false).with_extension_type(
-            TemperatureExtensionType(DataType::Float64, TemperatureUnit::Celsius),
+            TemperatureExtensionType::new(DataType::Float64, TemperatureUnit::Celsius),
         ),
         Field::new("fahrenheit", DataType::Float64, false).with_extension_type(
-            TemperatureExtensionType(DataType::Float64, TemperatureUnit::Fahrenheit),
+            TemperatureExtensionType::new(DataType::Float64, TemperatureUnit::Fahrenheit),
         ),
         Field::new("kelvin", DataType::Float32, false).with_extension_type(
-            TemperatureExtensionType(DataType::Float32, TemperatureUnit::Kelvin),
+            TemperatureExtensionType::new(DataType::Float32, TemperatureUnit::Kelvin),
         ),
     ]))
 }
@@ -131,7 +134,23 @@ pub enum TemperatureUnit {
 /// See [the official Arrow documentation](https://arrow.apache.org/docs/format/Columnar.html#extension-types)
 /// for more details on the extension type mechanism.
 #[derive(Debug)]
-pub struct TemperatureExtensionType(DataType, TemperatureUnit);
+pub struct TemperatureExtensionType {
+    /// Extension type instances are always for a specific storage type and metadata pairing.
+    /// Therefore, we store the storage type.
+    storage_type: DataType,
+    /// The unit of the temperature.
+    temperature_unit: TemperatureUnit,
+}
+
+impl TemperatureExtensionType {
+    /// Creates a new [`TemperatureExtensionType`].
+    pub fn new(storage_type: DataType, temperature_unit: TemperatureUnit) -> Self {
+        Self {
+            storage_type,
+            temperature_unit,
+        }
+    }
+}
 
 /// Implementation of [`ExtensionType`] for [`TemperatureExtensionType`].
 ///
@@ -142,7 +161,7 @@ impl ExtensionType for TemperatureExtensionType {
     type Metadata = TemperatureUnit;
 
     fn metadata(&self) -> &Self::Metadata {
-        &self.1
+        &self.temperature_unit
     }
 
     /// Arrow extension type metadata is encoded as a string and stored using the
@@ -150,7 +169,7 @@ impl ExtensionType for TemperatureExtensionType {
     /// suffices. Extension types can store more complex metadata using serialization formats like
     /// JSON.
     fn serialize_metadata(&self) -> Option<String> {
-        let s = match self.1 {
+        let s = match self.temperature_unit {
             TemperatureUnit::Celsius => "celsius",
             TemperatureUnit::Fahrenheit => "fahrenheit",
             TemperatureUnit::Kelvin => "kelvin",
@@ -193,7 +212,7 @@ impl ExtensionType for TemperatureExtensionType {
         data_type: &DataType,
         metadata: Self::Metadata,
     ) -> std::result::Result<Self, ArrowError> {
-        let instance = Self(data_type.clone(), metadata);
+        let instance = Self::new(data_type.clone(), metadata);
         instance.supports_data_type(data_type)?;
         Ok(instance)
     }
@@ -204,7 +223,7 @@ impl ExtensionType for TemperatureExtensionType {
 /// This implements the trait for customizing DataFusion.
 impl DFExtensionType for TemperatureExtensionType {
     fn storage_type(&self) -> DataType {
-        self.0.clone()
+        self.storage_type.clone()
     }
 
     fn serialize_metadata(&self) -> Option<String> {
@@ -216,12 +235,12 @@ impl DFExtensionType for TemperatureExtensionType {
         array: &'fmt dyn Array,
         options: &FormatOptions<'fmt>,
     ) -> Result<Option<ArrayFormatter<'fmt>>> {
-        match self.0 {
+        match self.storage_type {
             DataType::Float32 => {
                 let display_index = TemperatureDisplayIndex {
                     array: array.as_primitive::<Float32Type>(),
                     null_str: options.null(),
-                    unit: self.1,
+                    unit: self.temperature_unit,
                 };
                 Ok(Some(ArrayFormatter::new(
                     Box::new(display_index),
@@ -232,7 +251,7 @@ impl DFExtensionType for TemperatureExtensionType {
                 let display_index = TemperatureDisplayIndex {
                     array: array.as_primitive::<Float64Type>(),
                     null_str: options.null(),
-                    unit: self.1,
+                    unit: self.temperature_unit,
                 };
                 Ok(Some(ArrayFormatter::new(
                     Box::new(display_index),

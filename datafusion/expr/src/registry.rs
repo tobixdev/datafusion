@@ -327,9 +327,8 @@ pub trait ExtensionTypeRegistry: Debug + Send + Sync {
 }
 
 /// A factory that creates instances of extension types from a storage [`DataType`] and the
-/// metadata. [`TExtensionType`] should implement both, the arrow-rs [`ExtensionType`] and the
-/// DataFusion [`DFExtensionType`] traits.
-pub type DefaultExtensionTypeFactory<TExtensionType> = dyn Fn(&DataType, <TExtensionType as ExtensionType>::Metadata) -> Result<TExtensionType>
+/// metadata.
+pub type ExtensionTypeFactory<TExtensionType> = dyn Fn(&DataType, <TExtensionType as ExtensionType>::Metadata) -> Result<TExtensionType>
     + Send
     + Sync;
 
@@ -340,7 +339,7 @@ pub struct DefaultExtensionTypeRegistration<
 > {
     /// A function that creates an instance of [`DFExtensionTypeRef`] from the storage type and the
     /// metadata.
-    factory: Box<DefaultExtensionTypeFactory<TExtensionType>>,
+    factory: Box<ExtensionTypeFactory<TExtensionType>>,
 }
 
 impl<TExtensionType: ExtensionType + DFExtensionType + 'static>
