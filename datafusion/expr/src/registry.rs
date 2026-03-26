@@ -21,6 +21,7 @@ use crate::expr_rewriter::FunctionRewrite;
 use crate::planner::ExprPlanner;
 use crate::{AggregateUDF, ScalarUDF, UserDefinedLogicalNode, WindowUDF};
 use arrow::datatypes::Field;
+use arrow_schema::DataType;
 use arrow_schema::extension::ExtensionType;
 use datafusion_common::types::{DFExtensionType, DFExtensionTypeRef};
 use datafusion_common::{HashMap, Result, not_impl_err, plan_datafusion_err};
@@ -250,6 +251,7 @@ pub trait ExtensionTypeRegistration: Debug + Send + Sync {
     /// type is not a parameter as it's already defined by the registration itself.
     fn create_df_extension_type(
         &self,
+        storage_type: &DataType,
         metadata: Option<&str>,
     ) -> Result<DFExtensionTypeRef>;
 }
@@ -285,7 +287,7 @@ pub trait ExtensionTypeRegistry: Debug + Send + Sync {
 
         let registration = self.extension_type_registration(extension_type_name)?;
         registration
-            .create_df_extension_type(field.extension_type_metadata())
+            .create_df_extension_type(field.data_type(), field.extension_type_metadata())
             .map(Some)
     }
 
@@ -324,22 +326,33 @@ pub trait ExtensionTypeRegistry: Debug + Send + Sync {
     ) -> Result<Option<ExtensionTypeRegistrationRef>>;
 }
 
+/// A factory that creates instances of extension types from a storage [`DataType`] and the
+/// metadata. [`TExtensionType`] should implement both, the arrow-rs [`ExtensionType`] and the
+/// DataFusion [`DFExtensionType`] traits.
+pub type DefaultExtensionTypeFactory<TExtensionType> = dyn Fn(&DataType, <TExtensionType as ExtensionType>::Metadata) -> Result<TExtensionType>
+    + Send
+    + Sync;
+
 /// A default implementation of [ExtensionTypeRegistration] that parses the metadata from the
 /// given extension type and passes it to a constructor function.
 pub struct DefaultExtensionTypeRegistration<
     TExtensionType: ExtensionType + DFExtensionType + 'static,
 > {
-    /// A function that creates an instance of [`DFExtensionTypeRef`] from the metadata.
-    factory:
-        Box<dyn Fn(TExtensionType::Metadata) -> Result<TExtensionType> + Send + Sync>,
+    /// A function that creates an instance of [`DFExtensionTypeRef`] from the storage type and the
+    /// metadata.
+    factory: Box<DefaultExtensionTypeFactory<TExtensionType>>,
 }
 
 impl<TExtensionType: ExtensionType + DFExtensionType + 'static>
     DefaultExtensionTypeRegistration<TExtensionType>
 {
-    /// Creates a new registration for the given `name` and `logical_type`.
+    /// Creates a new registration for an extension type.
+    ///
+    /// The factory is not required to validate the storage [`DataType`], as the compatibility will
+    /// be checked by the registration using [`ExtensionType::supports_data_type`]. However, the
+    /// factory may still choose to do so.
     pub fn new_arc(
-        factory: impl Fn(TExtensionType::Metadata) -> Result<TExtensionType>
+        factory: impl Fn(&DataType, TExtensionType::Metadata) -> Result<TExtensionType>
         + Send
         + Sync
         + 'static,
@@ -359,11 +372,22 @@ impl<TExtensionType: ExtensionType + DFExtensionType> ExtensionTypeRegistration
 
     fn create_df_extension_type(
         &self,
+        storage_type: &DataType,
         metadata: Option<&str>,
     ) -> Result<DFExtensionTypeRef> {
         let metadata = TExtensionType::deserialize_metadata(metadata)?;
-        self.factory.as_ref()(metadata)
-            .map(|extension_type| Arc::new(extension_type) as DFExtensionTypeRef)
+        let type_instance = self.factory.as_ref()(storage_type, metadata)?;
+        type_instance
+            .supports_data_type(storage_type)
+            .map_err(|_| {
+                plan_datafusion_err!(
+                    "Extension type {} obtained from registration does not support the storage data type {}",
+                    TExtensionType::NAME,
+                    storage_type
+                )
+            })?;
+
+        Ok(Arc::new(type_instance) as DFExtensionTypeRef)
     }
 }
 
@@ -401,7 +425,7 @@ impl MemoryExtensionTypeRegistry {
     /// Pre-registers the [canonical extension types](https://arrow.apache.org/docs/format/CanonicalExtensions.html)
     /// in the extension type registry.
     pub fn new_with_canonical_extension_types() -> Self {
-        let mapping = [DefaultExtensionTypeRegistration::new_arc(|_| {
+        let mapping = [DefaultExtensionTypeRegistration::new_arc(|_, _| {
             Ok(arrow_schema::extension::Uuid {})
         })];
 

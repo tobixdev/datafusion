@@ -27,6 +27,14 @@ use uuid::{Bytes, Uuid};
 ///
 /// See [`DFExtensionType`] for information on DataFusion's extension type mechanism.
 impl DFExtensionType for arrow_schema::extension::Uuid {
+    fn storage_type(&self) -> DataType {
+        DataType::FixedSizeBinary(16)
+    }
+
+    fn serialize_metadata(&self) -> Option<String> {
+        None
+    }
+
     fn create_array_formatter<'fmt>(
         &self,
         array: &'fmt dyn Array,
