@@ -59,7 +59,7 @@ async fn create_test_table() -> Result<DataFrame> {
 }
 
 #[tokio::test]
-async fn test_pretty_print_logical_plan() -> Result<()> {
+async fn test_pretty_print_extension_type_formatter() -> Result<()> {
     let result = create_test_table().await?.to_string().await?;
 
     assert_snapshot!(

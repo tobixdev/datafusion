@@ -15,10 +15,10 @@
 // specific language governing permissions and limitations
 // under the License.
 
+use crate::registry::ExtensionTypeRegistryRef;
 use arrow::array::Array;
 use arrow::util::display::{ArrayFormatter, ArrayFormatterFactory, FormatOptions};
 use arrow_schema::{ArrowError, Field};
-use datafusion_expr::registry::ExtensionTypeRegistryRef;
 
 /// A factory for creating [`ArrayFormatter`]s that checks whether a registered extension type can
 /// format a given array based on its metadata.
