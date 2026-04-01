@@ -23,7 +23,7 @@ use arrow::util::display::{ArrayFormatter, DisplayIndex, FormatOptions, FormatRe
 use arrow_schema::ArrowError;
 use arrow_schema::extension::{ExtensionType, Uuid};
 use std::fmt::Write;
-use uuid::{Bytes, Uuid as UuidImpl};
+use uuid::Bytes;
 
 /// Defines the extension type logic for the canonical `arrow.uuid` extension type.
 ///
@@ -106,7 +106,7 @@ impl DisplayIndex for UuidValueDisplayIndex<'_> {
 
         let bytes = Bytes::try_from(self.array.value(idx))
             .expect("FixedSizeBinaryArray length checked in create_array_formatter");
-        let uuid = UuidImpl::from_bytes(bytes);
+        let uuid = uuid::Uuid::from_bytes(bytes);
         write!(f, "{uuid}")?;
         Ok(())
     }
