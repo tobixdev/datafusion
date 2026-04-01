@@ -18,64 +18,7 @@
 use crate::types::extension::DFExtensionType;
 use arrow::datatypes::DataType;
 use arrow_schema::ArrowError;
-use arrow_schema::extension::{ExtensionType, FixedShapeTensor, VariableShapeTensor};
-
-/// Defines the extension type logic for the canonical `arrow.fixed_shape_tensor` extension type.
-///
-/// See [`DFExtensionType`] for information on DataFusion's extension type mechanism.
-#[derive(Debug, Clone)]
-pub struct DFFixedShapeTensor {
-    inner: FixedShapeTensor,
-    /// The storage type of the tensor.
-    ///
-    /// While we could reconstruct the storage type from the inner [`FixedShapeTensor`], we may
-    /// choose a different name for the field within the [`DataType::FixedSizeList`] which can
-    /// cause problems down the line (e.g., checking for equality).
-    storage_type: DataType,
-}
-
-impl ExtensionType for DFFixedShapeTensor {
-    const NAME: &'static str = FixedShapeTensor::NAME;
-    type Metadata = <FixedShapeTensor as ExtensionType>::Metadata;
-
-    fn metadata(&self) -> &Self::Metadata {
-        self.inner.metadata()
-    }
-
-    fn serialize_metadata(&self) -> Option<String> {
-        self.inner.serialize_metadata()
-    }
-
-    fn deserialize_metadata(
-        metadata: Option<&str>,
-    ) -> Result<Self::Metadata, ArrowError> {
-        FixedShapeTensor::deserialize_metadata(metadata)
-    }
-
-    fn supports_data_type(&self, data_type: &DataType) -> Result<(), ArrowError> {
-        self.inner.supports_data_type(data_type)
-    }
-
-    fn try_new(
-        data_type: &DataType,
-        metadata: Self::Metadata,
-    ) -> Result<Self, ArrowError> {
-        Ok(Self {
-            inner: <FixedShapeTensor as ExtensionType>::try_new(data_type, metadata)?,
-            storage_type: data_type.clone(),
-        })
-    }
-}
-
-impl DFExtensionType for DFFixedShapeTensor {
-    fn storage_type(&self) -> DataType {
-        self.storage_type.clone()
-    }
-
-    fn serialize_metadata(&self) -> Option<String> {
-        self.inner.serialize_metadata()
-    }
-}
+use arrow_schema::extension::{ExtensionType, VariableShapeTensor};
 
 /// Defines the extension type logic for the canonical `arrow.variable_shape_tensor` extension type.
 ///
