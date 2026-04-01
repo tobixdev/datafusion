@@ -19,6 +19,7 @@ use crate::ScalarValue;
 use crate::error::_internal_err;
 use crate::types::extension::DFExtensionType;
 use arrow::array::{Array, AsArray, Int16Array};
+use arrow::buffer::NullBuffer;
 use arrow::datatypes::{
     DataType, Int16Type, TimeUnit, TimestampMicrosecondType, TimestampMillisecondType,
     TimestampNanosecondType, TimestampSecondType,
@@ -102,6 +103,7 @@ impl DFExtensionType for DFTimestampWithOffset {
             .as_primitive::<Int16Type>();
 
         let display_index = TimestampWithOffsetDisplayIndex {
+            null_buffer: struct_array.nulls(),
             timestamp_array,
             offset_array,
             options: options.clone(),
@@ -115,6 +117,9 @@ impl DFExtensionType for DFTimestampWithOffset {
 }
 
 struct TimestampWithOffsetDisplayIndex<'a> {
+    /// The inner arrays are always non-null. Use the null buffer of the struct array to check
+    /// whether an element is null.
+    null_buffer: Option<&'a NullBuffer>,
     timestamp_array: &'a dyn Array,
     offset_array: &'a Int16Array,
     options: FormatOptions<'a>,
@@ -122,6 +127,11 @@ struct TimestampWithOffsetDisplayIndex<'a> {
 
 impl DisplayIndex for TimestampWithOffsetDisplayIndex<'_> {
     fn write(&self, idx: usize, f: &mut dyn Write) -> FormatResult {
+        if self.null_buffer.map(|nb| nb.is_null(idx)).unwrap_or(false) {
+            write!(f, "{}", self.options.null())?;
+            return Ok(());
+        }
+
         let offset_minutes = self.offset_array.value(idx);
         let offset = format_offset(offset_minutes);
 
@@ -196,18 +206,25 @@ mod tests {
             .timestamp();
 
         let timestamp_array =
-            Arc::new(TimestampSecondArray::from(vec![ts, ts]).with_timezone("UTC"));
-        let offset_array = Arc::new(Int16Array::from(vec![60, -105]));
+            Arc::new(TimestampSecondArray::from(vec![ts, ts, ts]).with_timezone("UTC"));
+        let offset_array = Arc::new(Int16Array::from(vec![60, -105, 0]));
 
-        let struct_array =
-            StructArray::try_new(fields, vec![timestamp_array, offset_array], None)?;
+        let struct_array = StructArray::try_new(
+            fields,
+            vec![timestamp_array, offset_array],
+            Some(NullBuffer::from(vec![true, true, false])),
+        )?;
 
         let formatter = DFTimestampWithOffset::try_new(struct_array.data_type(), ())?
-            .create_array_formatter(&struct_array, &FormatOptions::default())?
+            .create_array_formatter(
+                &struct_array,
+                &FormatOptions::default().with_null("NULL"),
+            )?
             .unwrap();
 
         assert_eq!(formatter.value(0).to_string(), "2024-04-01T01:00:00+01:00");
         assert_eq!(formatter.value(1).to_string(), "2024-03-31T22:15:00-01:45");
+        assert_eq!(formatter.value(2).to_string(), "NULL");
 
         Ok(())
     }
