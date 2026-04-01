@@ -15,9 +15,9 @@
 // specific language governing permissions and limitations
 // under the License.
 
+use crate::ScalarValue;
 use crate::error::_internal_err;
 use crate::types::extension::DFExtensionType;
-use crate::ScalarValue;
 use arrow::array::{Array, AsArray, Int16Array};
 use arrow::buffer::NullBuffer;
 use arrow::compute::cast;
@@ -26,8 +26,8 @@ use arrow::datatypes::{
     TimestampNanosecondType, TimestampSecondType,
 };
 use arrow::util::display::{ArrayFormatter, DisplayIndex, FormatOptions, FormatResult};
-use arrow_schema::extension::{ExtensionType, TimestampWithOffset};
 use arrow_schema::ArrowError;
+use arrow_schema::extension::{ExtensionType, TimestampWithOffset};
 use std::fmt::Write;
 
 /// Defines the extension type logic for the canonical `arrow.timestamp_with_offset` extension type.
@@ -201,7 +201,7 @@ mod tests {
         TimestampSecondArray,
     };
     use arrow::buffer::NullBuffer;
-    use arrow::datatypes::{Field, Fields, Int32Type};
+    use arrow::datatypes::{Field, Fields, Int16Type, Int32Type};
     use chrono::{TimeZone, Utc};
     use std::sync::Arc;
 
