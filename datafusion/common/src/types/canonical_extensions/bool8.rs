@@ -20,18 +20,55 @@ use crate::types::extension::DFExtensionType;
 use arrow::array::{Array, Int8Array};
 use arrow::datatypes::DataType;
 use arrow::util::display::{ArrayFormatter, DisplayIndex, FormatOptions, FormatResult};
+use arrow_schema::ArrowError;
+use arrow_schema::extension::{Bool8, ExtensionType};
 use std::fmt::Write;
 
-/// Defines the extension type logic for the canonical `arrow.uuid` extension type.
+/// Defines the extension type logic for the canonical `arrow.bool8` extension type.
 ///
 /// See [`DFExtensionType`] for information on DataFusion's extension type mechanism.
-impl DFExtensionType for arrow_schema::extension::Bool8 {
+#[derive(Debug, Clone)]
+pub struct DFBool8(Bool8);
+
+impl ExtensionType for DFBool8 {
+    const NAME: &'static str = Bool8::NAME;
+    type Metadata = <Bool8 as ExtensionType>::Metadata;
+
+    fn metadata(&self) -> &Self::Metadata {
+        self.0.metadata()
+    }
+
+    fn serialize_metadata(&self) -> Option<String> {
+        self.0.serialize_metadata()
+    }
+
+    fn deserialize_metadata(
+        metadata: Option<&str>,
+    ) -> Result<Self::Metadata, ArrowError> {
+        Bool8::deserialize_metadata(metadata)
+    }
+
+    fn supports_data_type(&self, data_type: &DataType) -> Result<(), ArrowError> {
+        self.0.supports_data_type(data_type)
+    }
+
+    fn try_new(
+        data_type: &DataType,
+        metadata: Self::Metadata,
+    ) -> Result<Self, ArrowError> {
+        Ok(Self(<Bool8 as ExtensionType>::try_new(
+            data_type, metadata,
+        )?))
+    }
+}
+
+impl DFExtensionType for DFBool8 {
     fn storage_type(&self) -> DataType {
         DataType::Int8
     }
 
     fn serialize_metadata(&self) -> Option<String> {
-        None
+        self.0.serialize_metadata()
     }
 
     fn create_array_formatter<'fmt>(
@@ -82,7 +119,7 @@ mod tests {
     pub fn test_pretty_bool8() {
         let values = Int8Array::from_iter([Some(0), Some(1), Some(-20), None]);
 
-        let extension_type = arrow_schema::extension::Bool8 {};
+        let extension_type = DFBool8(Bool8 {});
         let formatter = extension_type
             .create_array_formatter(&values, &FormatOptions::default().with_null("NULL"))
             .unwrap()
