@@ -21,15 +21,17 @@
 // under the License.
 
 mod bool8;
+mod fixed_shape_tensor;
 mod json;
 mod opaque;
-mod tensor;
 mod timestamp_with_offset;
 mod uuid;
+mod variable_shape_tensor;
 
 pub use bool8::DFBool8;
+pub use fixed_shape_tensor::DFFixedShapeTensor;
 pub use json::DFJson;
 pub use opaque::DFOpaque;
-pub use tensor::{DFFixedShapeTensor, DFVariableShapeTensor};
 pub use timestamp_with_offset::DFTimestampWithOffset;
 pub use uuid::DFUuid;
+pub use variable_shape_tensor::DFVariableShapeTensor;

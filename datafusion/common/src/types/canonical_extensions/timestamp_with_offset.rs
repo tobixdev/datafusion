@@ -186,8 +186,10 @@ fn format_offset(minutes: i16) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use arrow::array::{StructArray, TimestampSecondArray};
     use arrow::datatypes::{Field, Fields};
     use chrono::{TimeZone, Utc};
+    use std::sync::Arc;
 
     #[test]
     fn test_pretty_print_timestamp_with_offset() -> Result<(), ArrowError> {
