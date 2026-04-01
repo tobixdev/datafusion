@@ -23,7 +23,10 @@ use crate::{AggregateUDF, ScalarUDF, UserDefinedLogicalNode, WindowUDF};
 use arrow::datatypes::Field;
 use arrow_schema::DataType;
 use arrow_schema::extension::ExtensionType;
-use datafusion_common::types::{DFExtensionType, DFExtensionTypeRef};
+use datafusion_common::types::{
+    DFBool8, DFExtensionType, DFExtensionTypeRef, DFFixedShapeTensor, DFJson, DFOpaque,
+    DFTimestampWithOffset, DFUuid, DFVariableShapeTensor,
+};
 use datafusion_common::{HashMap, Result, not_impl_err, plan_datafusion_err};
 use std::collections::HashSet;
 use std::fmt::{Debug, Formatter};
@@ -424,9 +427,29 @@ impl MemoryExtensionTypeRegistry {
     /// Pre-registers the [canonical extension types](https://arrow.apache.org/docs/format/CanonicalExtensions.html)
     /// in the extension type registry.
     pub fn new_with_canonical_extension_types() -> Self {
-        let mapping = [DefaultExtensionTypeRegistration::new_arc(|_, _| {
-            Ok(arrow_schema::extension::Uuid {})
-        })];
+        let mapping = [
+            DefaultExtensionTypeRegistration::new_arc(|storage_type, metadata| {
+                Ok(DFFixedShapeTensor::try_new(storage_type, metadata)?)
+            }),
+            DefaultExtensionTypeRegistration::new_arc(|storage_type, metadata| {
+                Ok(DFVariableShapeTensor::try_new(storage_type, metadata)?)
+            }),
+            DefaultExtensionTypeRegistration::new_arc(|storage_type, metadata| {
+                Ok(DFJson::try_new(storage_type, metadata)?)
+            }),
+            DefaultExtensionTypeRegistration::new_arc(|storage_type, metadata| {
+                Ok(DFUuid::try_new(storage_type, metadata)?)
+            }),
+            DefaultExtensionTypeRegistration::new_arc(|storage_type, metadata| {
+                Ok(DFOpaque::try_new(storage_type, metadata)?)
+            }),
+            DefaultExtensionTypeRegistration::new_arc(|storage_type, metadata| {
+                Ok(DFBool8::try_new(storage_type, metadata)?)
+            }),
+            DefaultExtensionTypeRegistration::new_arc(|storage_type, metadata| {
+                Ok(DFTimestampWithOffset::try_new(storage_type, metadata)?)
+            }),
+        ];
 
         let mut extension_types = HashMap::new();
         for registration in mapping.into_iter() {

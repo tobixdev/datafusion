@@ -55,6 +55,15 @@ pub type DFExtensionTypeRef = Arc<dyn DFExtensionType>;
 /// Furthermore, the current trait in arrow-rs is not dyn-compatible, which we need for implementing
 /// extension type registries. In the future, the two implementations may increasingly converge.
 ///
+/// Another difference is that [`DFExtensionType`] represents a fully resolved extension type that
+/// has a fixed storage type (i.e., [`DataType`]). This is different from arrow-rs, which does not
+/// have a fixed storage type. For example, while the DataFusion and arrow-rs JSON types share the
+/// same metadata, an instance of DataFusion's extension type chooses one of the three possible
+/// storage types: [`DataType::Utf8`], [`DataType::LargeUtf8`], or [`DataType::Utf8View`].
+/// This fixed storaga type is returned in [`DFExtensionType::storage_type`]. This is also the
+/// reason why we have different structs in DataFusion (e.g., [`DFJson`](crate::types::DFJson)
+/// instead of [`Json`](arrow_schema::extension::Json)).
+///
 /// # Examples
 ///
 /// Examples for using the extension type machinery can be found in the DataFusion examples

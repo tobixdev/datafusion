@@ -4,7 +4,12 @@
 // regarding copyright ownership.  The ASF licenses this file
 // to you under the Apache License, Version 2.0 (the
 // "License"); you may not use this file except in compliance
-// with the License.  You may obtain a copy of the License at
+// with the License.  See the NOTICE file distributed with this
+// work for additional information regarding copyright ownership.
+// The ASF licenses this file to you under the Apache License,
+// Version 2.0 (the "License"); you may not use this file
+// except in compliance with the License.  You may obtain a
+// copy of the License at
 //
 //   http://www.apache.org/licenses/LICENSE-2.0
 //
@@ -16,4 +21,15 @@
 // under the License.
 
 mod bool8;
+mod json;
+mod opaque;
+mod tensor;
+mod timestamp_with_offset;
 mod uuid;
+
+pub use bool8::DFBool8;
+pub use json::DFJson;
+pub use opaque::DFOpaque;
+pub use tensor::{DFFixedShapeTensor, DFVariableShapeTensor};
+pub use timestamp_with_offset::DFTimestampWithOffset;
+pub use uuid::DFUuid;
