@@ -15,18 +15,19 @@
 // specific language governing permissions and limitations
 // under the License.
 
-use crate::ScalarValue;
 use crate::error::_internal_err;
 use crate::types::extension::DFExtensionType;
+use crate::ScalarValue;
 use arrow::array::{Array, AsArray, Int16Array};
 use arrow::buffer::NullBuffer;
+use arrow::compute::cast;
 use arrow::datatypes::{
-    DataType, Int16Type, TimeUnit, TimestampMicrosecondType, TimestampMillisecondType,
+    DataType, TimeUnit, TimestampMicrosecondType, TimestampMillisecondType,
     TimestampNanosecondType, TimestampSecondType,
 };
 use arrow::util::display::{ArrayFormatter, DisplayIndex, FormatOptions, FormatResult};
-use arrow_schema::ArrowError;
 use arrow_schema::extension::{ExtensionType, TimestampWithOffset};
+use arrow_schema::ArrowError;
 use std::fmt::Write;
 
 /// Defines the extension type logic for the canonical `arrow.timestamp_with_offset` extension type.
@@ -97,10 +98,14 @@ impl DFExtensionType for DFTimestampWithOffset {
             .column_by_name("timestamp")
             .expect("Type checked above")
             .as_ref();
-        let offset_array = struct_array
+        let raw_offset_array = struct_array
             .column_by_name("offset_minutes")
-            .expect("Type checked above")
-            .as_primitive::<Int16Type>();
+            .expect("Type checked above");
+
+        // Get a regular [`Int16Array`], if the offset array is a dictionary or run-length encoded.
+        let offset_array = cast(&raw_offset_array, &DataType::Int16)?
+            .as_primitive()
+            .clone();
 
         let display_index = TimestampWithOffsetDisplayIndex {
             null_buffer: struct_array.nulls(),
@@ -121,7 +126,7 @@ struct TimestampWithOffsetDisplayIndex<'a> {
     /// whether an element is null.
     null_buffer: Option<&'a NullBuffer>,
     timestamp_array: &'a dyn Array,
-    offset_array: &'a Int16Array,
+    offset_array: Int16Array,
     options: FormatOptions<'a>,
 }
 
@@ -191,51 +196,123 @@ fn format_offset(minutes: i16) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use arrow::array::{StructArray, TimestampSecondArray};
-    use arrow::datatypes::{Field, Fields};
+    use arrow::array::{
+        Array, DictionaryArray, Int16Array, Int32Array, RunArray, StructArray,
+        TimestampSecondArray,
+    };
+    use arrow::buffer::NullBuffer;
+    use arrow::datatypes::{Field, Fields, Int32Type};
     use chrono::{TimeZone, Utc};
     use std::sync::Arc;
 
     #[test]
     fn test_pretty_print_timestamp_with_offset() -> Result<(), ArrowError> {
-        let fields = create_fields(TimeUnit::Second);
-
         let ts = Utc
             .with_ymd_and_hms(2024, 4, 1, 0, 0, 0)
             .unwrap()
             .timestamp();
 
-        let timestamp_array =
-            Arc::new(TimestampSecondArray::from(vec![ts, ts, ts]).with_timezone("UTC"));
         let offset_array = Arc::new(Int16Array::from(vec![60, -105, 0]));
 
-        let struct_array = StructArray::try_new(
-            fields,
-            vec![timestamp_array, offset_array],
+        run_formatting_test(
+            vec![ts, ts, ts],
+            offset_array,
             Some(NullBuffer::from(vec![true, true, false])),
-        )?;
-
-        let formatter = DFTimestampWithOffset::try_new(struct_array.data_type(), ())?
-            .create_array_formatter(
-                &struct_array,
-                &FormatOptions::default().with_null("NULL"),
-            )?
-            .unwrap();
-
-        assert_eq!(formatter.value(0).to_string(), "2024-04-01T01:00:00+01:00");
-        assert_eq!(formatter.value(1).to_string(), "2024-03-31T22:15:00-01:45");
-        assert_eq!(formatter.value(2).to_string(), "NULL");
-
-        Ok(())
+            FormatOptions::default().with_null("NULL"),
+            &[
+                "2024-04-01T01:00:00+01:00",
+                "2024-03-31T22:15:00-01:45",
+                "NULL",
+            ],
+        )
     }
 
-    fn create_fields(time_unit: TimeUnit) -> Fields {
+    #[test]
+    fn test_pretty_print_dictionary_offset() -> Result<(), ArrowError> {
+        let ts = Utc
+            .with_ymd_and_hms(2024, 4, 1, 12, 0, 0)
+            .unwrap()
+            .timestamp();
+
+        let offset_array = Arc::new(DictionaryArray::<Int16Type>::new(
+            Int16Array::from(vec![0, 1, 0]),
+            Arc::new(Int16Array::from(vec![60, -60])),
+        ));
+
+        run_formatting_test(
+            vec![ts, ts, ts],
+            offset_array,
+            None,
+            FormatOptions::default(),
+            &[
+                "2024-04-01T13:00:00+01:00",
+                "2024-04-01T11:00:00-01:00",
+                "2024-04-01T13:00:00+01:00",
+            ],
+        )
+    }
+
+    #[test]
+    fn test_pretty_print_rle_offset() -> Result<(), ArrowError> {
+        let ts = Utc
+            .with_ymd_and_hms(2024, 4, 1, 12, 0, 0)
+            .unwrap()
+            .timestamp();
+
+        let run_ends = Int32Array::from(vec![2]);
+        let values = Int16Array::from(vec![120]);
+        let offset_array = Arc::new(RunArray::<Int32Type>::try_new(&run_ends, &values)?);
+
+        run_formatting_test(
+            vec![ts, ts],
+            offset_array,
+            None,
+            FormatOptions::default(),
+            &["2024-04-01T14:00:00+02:00", "2024-04-01T14:00:00+02:00"],
+        )
+    }
+
+    /// Create valid fields with flexible offset types
+    fn create_fields_custom_offset(time_unit: TimeUnit, offset_type: DataType) -> Fields {
         let ts_field = Field::new(
             "timestamp",
             DataType::Timestamp(time_unit, Some("UTC".into())),
             false,
         );
-        let offset_field = Field::new("offset_minutes", DataType::Int16, false);
+        let offset_field = Field::new("offset_minutes", offset_type, false);
         Fields::from(vec![ts_field, offset_field])
+    }
+
+    /// Helper to construct the arrays, run the formatter, and assert the expected strings.
+    fn run_formatting_test(
+        timestamps: Vec<i64>,
+        offset_array: Arc<dyn Array>,
+        null_buffer: Option<NullBuffer>,
+        options: FormatOptions,
+        expected: &[&str],
+    ) -> Result<(), ArrowError> {
+        let fields = create_fields_custom_offset(
+            TimeUnit::Second,
+            offset_array.data_type().clone(),
+        );
+
+        let struct_array = StructArray::try_new(
+            fields,
+            vec![
+                Arc::new(TimestampSecondArray::from(timestamps).with_timezone("UTC")),
+                offset_array,
+            ],
+            null_buffer,
+        )?;
+
+        let formatter = DFTimestampWithOffset::try_new(struct_array.data_type(), ())?
+            .create_array_formatter(&struct_array, &options)?
+            .unwrap();
+
+        for (i, expected_str) in expected.iter().enumerate() {
+            assert_eq!(formatter.value(i).to_string(), *expected_str);
+        }
+
+        Ok(())
     }
 }
