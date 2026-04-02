@@ -15,12 +15,12 @@
 // specific language governing permissions and limitations
 // under the License.
 
+use crate::Result;
 use crate::error::_internal_err;
 use crate::types::extension::DFExtensionType;
 use arrow::array::{Array, Int8Array};
 use arrow::datatypes::DataType;
 use arrow::util::display::{ArrayFormatter, DisplayIndex, FormatOptions, FormatResult};
-use arrow_schema::ArrowError;
 use arrow_schema::extension::{Bool8, ExtensionType};
 use std::fmt::Write;
 
@@ -30,32 +30,13 @@ use std::fmt::Write;
 #[derive(Debug, Clone)]
 pub struct DFBool8(Bool8);
 
-impl ExtensionType for DFBool8 {
-    const NAME: &'static str = Bool8::NAME;
-    type Metadata = <Bool8 as ExtensionType>::Metadata;
-
-    fn metadata(&self) -> &Self::Metadata {
-        self.0.metadata()
-    }
-
-    fn serialize_metadata(&self) -> Option<String> {
-        self.0.serialize_metadata()
-    }
-
-    fn deserialize_metadata(
-        metadata: Option<&str>,
-    ) -> Result<Self::Metadata, ArrowError> {
-        Bool8::deserialize_metadata(metadata)
-    }
-
-    fn supports_data_type(&self, data_type: &DataType) -> Result<(), ArrowError> {
-        self.0.supports_data_type(data_type)
-    }
-
-    fn try_new(
+impl DFBool8 {
+    /// Creates a new [`DFBool8`], validating that the storage type is compatible with the
+    /// extension type.
+    pub fn try_new(
         data_type: &DataType,
-        metadata: Self::Metadata,
-    ) -> Result<Self, ArrowError> {
+        metadata: <Bool8 as ExtensionType>::Metadata,
+    ) -> Result<Self> {
         Ok(Self(<Bool8 as ExtensionType>::try_new(
             data_type, metadata,
         )?))
@@ -75,7 +56,7 @@ impl DFExtensionType for DFBool8 {
         &self,
         array: &'fmt dyn Array,
         options: &FormatOptions<'fmt>,
-    ) -> crate::Result<Option<ArrayFormatter<'fmt>>> {
+    ) -> Result<Option<ArrayFormatter<'fmt>>> {
         if array.data_type() != &DataType::Int8 {
             return _internal_err!("Wrong array type for Bool8");
         }

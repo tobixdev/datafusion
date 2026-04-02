@@ -15,9 +15,9 @@
 // specific language governing permissions and limitations
 // under the License.
 
+use crate::Result;
 use crate::types::extension::DFExtensionType;
 use arrow::datatypes::DataType;
-use arrow_schema::ArrowError;
 use arrow_schema::extension::{ExtensionType, Json};
 
 /// Defines the extension type logic for the canonical `arrow.json` extension type.
@@ -29,32 +29,13 @@ pub struct DFJson {
     storage_type: DataType,
 }
 
-impl ExtensionType for DFJson {
-    const NAME: &'static str = Json::NAME;
-    type Metadata = <Json as ExtensionType>::Metadata;
-
-    fn metadata(&self) -> &Self::Metadata {
-        self.inner.metadata()
-    }
-
-    fn serialize_metadata(&self) -> Option<String> {
-        self.inner.serialize_metadata()
-    }
-
-    fn deserialize_metadata(
-        metadata: Option<&str>,
-    ) -> Result<Self::Metadata, ArrowError> {
-        Json::deserialize_metadata(metadata)
-    }
-
-    fn supports_data_type(&self, data_type: &DataType) -> Result<(), ArrowError> {
-        self.inner.supports_data_type(data_type)
-    }
-
-    fn try_new(
+impl DFJson {
+    /// Creates a new [`DFJson`], validating that the storage type is compatible with the
+    /// extension type.
+    pub fn try_new(
         data_type: &DataType,
-        metadata: Self::Metadata,
-    ) -> Result<Self, ArrowError> {
+        metadata: <Json as ExtensionType>::Metadata,
+    ) -> Result<Self> {
         Ok(Self {
             inner: <Json as ExtensionType>::try_new(data_type, metadata)?,
             storage_type: data_type.clone(),
