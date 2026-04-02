@@ -51,12 +51,14 @@ fn create_session_context() -> Result<SessionContext> {
 
     // The registration creates a new instance of the extension type with the deserialized metadata.
     let temp_registration =
-        DefaultExtensionTypeRegistration::new_arc(|storage_type, metadata| {
-            Ok(TemperatureExtensionType::new(
-                storage_type.clone(),
-                metadata,
-            ))
-        });
+        DefaultExtensionTypeRegistration::<TemperatureExtensionType>::new_arc(
+            |storage_type, metadata| {
+                Ok(Arc::new(TemperatureExtensionType::try_new(
+                    storage_type,
+                    metadata,
+                )?))
+            },
+        );
     registry.add_extension_type_registration(temp_registration)?;
 
     let state = SessionStateBuilder::default()
@@ -97,13 +99,25 @@ fn example_schema() -> SchemaRef {
     Arc::new(Schema::new(vec![
         Field::new("city", DataType::Utf8, false),
         Field::new("celsius", DataType::Float64, false).with_extension_type(
-            TemperatureExtensionType::new(DataType::Float64, TemperatureUnit::Celsius),
+            TemperatureExtensionType::try_new(
+                &DataType::Float64,
+                TemperatureUnit::Celsius,
+            )
+            .expect("Valid Type"),
         ),
         Field::new("fahrenheit", DataType::Float64, false).with_extension_type(
-            TemperatureExtensionType::new(DataType::Float64, TemperatureUnit::Fahrenheit),
+            TemperatureExtensionType::try_new(
+                &DataType::Float64,
+                TemperatureUnit::Fahrenheit,
+            )
+            .expect("Valid Type"),
         ),
         Field::new("kelvin", DataType::Float32, false).with_extension_type(
-            TemperatureExtensionType::new(DataType::Float32, TemperatureUnit::Kelvin),
+            TemperatureExtensionType::try_new(
+                &DataType::Float32,
+                TemperatureUnit::Kelvin,
+            )
+            .expect("Valid Type"),
         ),
     ]))
 }
@@ -144,11 +158,16 @@ pub struct TemperatureExtensionType {
 
 impl TemperatureExtensionType {
     /// Creates a new [`TemperatureExtensionType`].
-    pub fn new(storage_type: DataType, temperature_unit: TemperatureUnit) -> Self {
-        Self {
-            storage_type,
+    pub fn try_new(
+        storage_type: &DataType,
+        temperature_unit: TemperatureUnit,
+    ) -> Result<Self> {
+        let result = Self {
+            storage_type: storage_type.clone(),
             temperature_unit,
-        }
+        };
+        result.supports_data_type(&storage_type)?; // Validate the storage type
+        Ok(result)
     }
 }
 
@@ -212,7 +231,7 @@ impl ExtensionType for TemperatureExtensionType {
         data_type: &DataType,
         metadata: Self::Metadata,
     ) -> std::result::Result<Self, ArrowError> {
-        let instance = Self::new(data_type.clone(), metadata);
+        let instance = Self::try_new(data_type, metadata)?;
         instance.supports_data_type(data_type)?;
         Ok(instance)
     }
