@@ -166,7 +166,7 @@ impl TemperatureExtensionType {
             storage_type: storage_type.clone(),
             temperature_unit,
         };
-        result.supports_data_type(&storage_type)?; // Validate the storage type
+        result.supports_data_type(storage_type)?; // Validate the storage type
         Ok(result)
     }
 }
