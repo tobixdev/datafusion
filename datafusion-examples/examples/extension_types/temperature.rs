@@ -30,7 +30,7 @@ use datafusion::prelude::SessionContext;
 use datafusion_common::internal_err;
 use datafusion_common::types::DFExtensionType;
 use datafusion_expr::registry::{
-    DefaultExtensionTypeRegistration, ExtensionTypeRegistry, MemoryExtensionTypeRegistry,
+    ExtensionTypeRegistration, ExtensionTypeRegistry, MemoryExtensionTypeRegistry,
 };
 use std::collections::HashMap;
 use std::fmt::{Display, Write};
@@ -51,7 +51,7 @@ fn create_session_context() -> Result<SessionContext> {
     let registry = MemoryExtensionTypeRegistry::new_empty();
 
     // The registration creates a new instance of the extension type with the deserialized metadata.
-    let temp_registration = DefaultExtensionTypeRegistration::new_arc(
+    let temp_registration = ExtensionTypeRegistration::new_arc(
         TemperatureExtensionType::NAME,
         |storage_type, metadata| {
             Ok(Arc::new(TemperatureExtensionType::try_new(
