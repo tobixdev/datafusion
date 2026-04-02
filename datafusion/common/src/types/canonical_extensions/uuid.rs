@@ -15,12 +15,12 @@
 // specific language governing permissions and limitations
 // under the License.
 
+use crate::Result;
 use crate::error::_internal_err;
 use crate::types::extension::DFExtensionType;
 use arrow::array::{Array, FixedSizeBinaryArray};
 use arrow::datatypes::DataType;
 use arrow::util::display::{ArrayFormatter, DisplayIndex, FormatOptions, FormatResult};
-use arrow_schema::ArrowError;
 use arrow_schema::extension::{ExtensionType, Uuid};
 use std::fmt::Write;
 use uuid::Bytes;
@@ -31,32 +31,13 @@ use uuid::Bytes;
 #[derive(Debug, Clone)]
 pub struct DFUuid(Uuid);
 
-impl ExtensionType for DFUuid {
-    const NAME: &'static str = Uuid::NAME;
-    type Metadata = <Uuid as ExtensionType>::Metadata;
-
-    fn metadata(&self) -> &Self::Metadata {
-        self.0.metadata()
-    }
-
-    fn serialize_metadata(&self) -> Option<String> {
-        self.0.serialize_metadata()
-    }
-
-    fn deserialize_metadata(
-        metadata: Option<&str>,
-    ) -> Result<Self::Metadata, ArrowError> {
-        Uuid::deserialize_metadata(metadata)
-    }
-
-    fn supports_data_type(&self, data_type: &DataType) -> Result<(), ArrowError> {
-        self.0.supports_data_type(data_type)
-    }
-
-    fn try_new(
+impl DFUuid {
+    /// Creates a new [`DFUuid`], validating that the storage type is compatible with the
+    /// extension type.
+    pub fn try_new(
         data_type: &DataType,
-        metadata: Self::Metadata,
-    ) -> Result<Self, ArrowError> {
+        metadata: <Uuid as ExtensionType>::Metadata,
+    ) -> Result<Self> {
         Ok(Self(<Uuid as ExtensionType>::try_new(data_type, metadata)?))
     }
 }
@@ -74,7 +55,7 @@ impl DFExtensionType for DFUuid {
         &self,
         array: &'fmt dyn Array,
         options: &FormatOptions<'fmt>,
-    ) -> crate::Result<Option<ArrayFormatter<'fmt>>> {
+    ) -> Result<Option<ArrayFormatter<'fmt>>> {
         if array.data_type() != &DataType::FixedSizeBinary(16) {
             return _internal_err!("Wrong array type for Uuid");
         }
@@ -116,6 +97,7 @@ impl DisplayIndex for UuidValueDisplayIndex<'_> {
 mod tests {
     use super::*;
     use crate::ScalarValue;
+    use arrow_schema::ArrowError;
 
     #[test]
     pub fn test_pretty_print_uuid() -> Result<(), ArrowError> {

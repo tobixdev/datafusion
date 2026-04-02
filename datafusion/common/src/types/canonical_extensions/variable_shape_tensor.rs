@@ -15,9 +15,9 @@
 // specific language governing permissions and limitations
 // under the License.
 
+use crate::Result;
 use crate::types::extension::DFExtensionType;
 use arrow::datatypes::DataType;
-use arrow_schema::ArrowError;
 use arrow_schema::extension::{ExtensionType, VariableShapeTensor};
 
 /// Defines the extension type logic for the canonical `arrow.variable_shape_tensor` extension type.
@@ -32,32 +32,13 @@ pub struct DFVariableShapeTensor {
     storage_type: DataType,
 }
 
-impl ExtensionType for DFVariableShapeTensor {
-    const NAME: &'static str = VariableShapeTensor::NAME;
-    type Metadata = <VariableShapeTensor as ExtensionType>::Metadata;
-
-    fn metadata(&self) -> &Self::Metadata {
-        self.inner.metadata()
-    }
-
-    fn serialize_metadata(&self) -> Option<String> {
-        self.inner.serialize_metadata()
-    }
-
-    fn deserialize_metadata(
-        metadata: Option<&str>,
-    ) -> Result<Self::Metadata, ArrowError> {
-        VariableShapeTensor::deserialize_metadata(metadata)
-    }
-
-    fn supports_data_type(&self, data_type: &DataType) -> Result<(), ArrowError> {
-        self.inner.supports_data_type(data_type)
-    }
-
-    fn try_new(
+impl DFVariableShapeTensor {
+    /// Creates a new [`DFVariableShapeTensor`], validating that the storage type is compatible with
+    /// the extension type.
+    pub fn try_new(
         data_type: &DataType,
-        metadata: Self::Metadata,
-    ) -> Result<Self, ArrowError> {
+        metadata: <VariableShapeTensor as ExtensionType>::Metadata,
+    ) -> Result<Self> {
         Ok(Self {
             inner: <VariableShapeTensor as ExtensionType>::try_new(data_type, metadata)?,
             storage_type: data_type.clone(),

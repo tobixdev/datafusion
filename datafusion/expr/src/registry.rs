@@ -22,9 +22,12 @@ use crate::planner::ExprPlanner;
 use crate::{AggregateUDF, ScalarUDF, UserDefinedLogicalNode, WindowUDF};
 use arrow::datatypes::Field;
 use arrow_schema::DataType;
-use arrow_schema::extension::ExtensionType;
+use arrow_schema::extension::{
+    Bool8, ExtensionType, FixedShapeTensor, Json, Opaque, TimestampWithOffset, Uuid,
+    VariableShapeTensor,
+};
 use datafusion_common::types::{
-    DFBool8, DFExtensionType, DFExtensionTypeRef, DFFixedShapeTensor, DFJson, DFOpaque,
+    DFBool8, DFExtensionTypeRef, DFFixedShapeTensor, DFJson, DFOpaque,
     DFTimestampWithOffset, DFUuid, DFVariableShapeTensor,
 };
 use datafusion_common::{HashMap, Result, not_impl_err, plan_datafusion_err};
@@ -331,30 +334,29 @@ pub trait ExtensionTypeRegistry: Debug + Send + Sync {
 
 /// A factory that creates instances of extension types from a storage [`DataType`] and the
 /// metadata.
-pub type ExtensionTypeFactory<TExtensionType> = dyn Fn(&DataType, <TExtensionType as ExtensionType>::Metadata) -> Result<TExtensionType>
+pub type ExtensionTypeFactory<TExtensionType> = dyn Fn(
+        &DataType,
+        <TExtensionType as ExtensionType>::Metadata,
+    ) -> Result<DFExtensionTypeRef>
     + Send
     + Sync;
 
 /// A default implementation of [ExtensionTypeRegistration] that parses the metadata from the
-/// given extension type and passes it to a constructor function.
-pub struct DefaultExtensionTypeRegistration<
-    TExtensionType: ExtensionType + DFExtensionType + 'static,
-> {
+/// given extension type and passes it to a constructor function. The [`ExtensionType::NAME`] is
+/// used for registering the extension type.
+pub struct DefaultExtensionTypeRegistration<TExtensionType: ExtensionType + 'static> {
     /// A function that creates an instance of [`DFExtensionTypeRef`] from the storage type and the
     /// metadata.
     factory: Box<ExtensionTypeFactory<TExtensionType>>,
 }
 
-impl<TExtensionType: ExtensionType + DFExtensionType + 'static>
+impl<TExtensionType: ExtensionType + 'static>
     DefaultExtensionTypeRegistration<TExtensionType>
 {
-    /// Creates a new registration for an extension type.
-    ///
-    /// The factory is not required to validate the storage [`DataType`], as the compatibility will
-    /// be checked by the registration using [`ExtensionType::supports_data_type`]. However, the
-    /// factory may still choose to do so.
+    /// Creates a new registration for an extension type. The factory is required to validate that
+    /// the storage [`DataType`] is compatible with the extension type.
     pub fn new_arc(
-        factory: impl Fn(&DataType, TExtensionType::Metadata) -> Result<TExtensionType>
+        factory: impl Fn(&DataType, TExtensionType::Metadata) -> Result<DFExtensionTypeRef>
         + Send
         + Sync
         + 'static,
@@ -365,7 +367,7 @@ impl<TExtensionType: ExtensionType + DFExtensionType + 'static>
     }
 }
 
-impl<TExtensionType: ExtensionType + DFExtensionType> ExtensionTypeRegistration
+impl<TExtensionType: ExtensionType> ExtensionTypeRegistration
     for DefaultExtensionTypeRegistration<TExtensionType>
 {
     fn type_name(&self) -> &str {
@@ -378,22 +380,11 @@ impl<TExtensionType: ExtensionType + DFExtensionType> ExtensionTypeRegistration
         metadata: Option<&str>,
     ) -> Result<DFExtensionTypeRef> {
         let metadata = TExtensionType::deserialize_metadata(metadata)?;
-        let type_instance = self.factory.as_ref()(storage_type, metadata)?;
-        type_instance
-            .supports_data_type(storage_type)
-            .map_err(|_| {
-                plan_datafusion_err!(
-                    "Extension type {} obtained from registration does not support the storage data type {}",
-                    TExtensionType::NAME,
-                    storage_type
-                )
-            })?;
-
-        Ok(Arc::new(type_instance) as DFExtensionTypeRef)
+        self.factory.as_ref()(storage_type, metadata)
     }
 }
 
-impl<TExtensionType: ExtensionType + DFExtensionType> Debug
+impl<TExtensionType: ExtensionType> Debug
     for DefaultExtensionTypeRegistration<TExtensionType>
 {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
@@ -428,27 +419,50 @@ impl MemoryExtensionTypeRegistry {
     /// in the extension type registry.
     pub fn new_with_canonical_extension_types() -> Self {
         let mapping = [
-            DefaultExtensionTypeRegistration::new_arc(|storage_type, metadata| {
-                Ok(DFFixedShapeTensor::try_new(storage_type, metadata)?)
-            }),
-            DefaultExtensionTypeRegistration::new_arc(|storage_type, metadata| {
-                Ok(DFVariableShapeTensor::try_new(storage_type, metadata)?)
-            }),
-            DefaultExtensionTypeRegistration::new_arc(|storage_type, metadata| {
-                Ok(DFJson::try_new(storage_type, metadata)?)
-            }),
-            DefaultExtensionTypeRegistration::new_arc(|storage_type, metadata| {
-                Ok(DFUuid::try_new(storage_type, metadata)?)
-            }),
-            DefaultExtensionTypeRegistration::new_arc(|storage_type, metadata| {
-                Ok(DFOpaque::try_new(storage_type, metadata)?)
-            }),
-            DefaultExtensionTypeRegistration::new_arc(|storage_type, metadata| {
-                Ok(DFBool8::try_new(storage_type, metadata)?)
-            }),
-            DefaultExtensionTypeRegistration::new_arc(|storage_type, metadata| {
-                Ok(DFTimestampWithOffset::try_new(storage_type, metadata)?)
-            }),
+            DefaultExtensionTypeRegistration::<FixedShapeTensor>::new_arc(
+                |storage_type, metadata| {
+                    Ok(Arc::new(DFFixedShapeTensor::try_new(
+                        storage_type,
+                        metadata,
+                    )?))
+                },
+            ),
+            DefaultExtensionTypeRegistration::<VariableShapeTensor>::new_arc(
+                |storage_type, metadata| {
+                    Ok(Arc::new(DFVariableShapeTensor::try_new(
+                        storage_type,
+                        metadata,
+                    )?))
+                },
+            ),
+            DefaultExtensionTypeRegistration::<Json>::new_arc(
+                |storage_type, metadata| {
+                    Ok(Arc::new(DFJson::try_new(storage_type, metadata)?))
+                },
+            ),
+            DefaultExtensionTypeRegistration::<Uuid>::new_arc(
+                |storage_type, metadata| {
+                    Ok(Arc::new(DFUuid::try_new(storage_type, metadata)?))
+                },
+            ),
+            DefaultExtensionTypeRegistration::<Opaque>::new_arc(
+                |storage_type, metadata| {
+                    Ok(Arc::new(DFOpaque::try_new(storage_type, metadata)?))
+                },
+            ),
+            DefaultExtensionTypeRegistration::<Bool8>::new_arc(
+                |storage_type, metadata| {
+                    Ok(Arc::new(DFBool8::try_new(storage_type, metadata)?))
+                },
+            ),
+            DefaultExtensionTypeRegistration::<TimestampWithOffset>::new_arc(
+                |storage_type, metadata| {
+                    Ok(Arc::new(DFTimestampWithOffset::try_new(
+                        storage_type,
+                        metadata,
+                    )?))
+                },
+            ),
         ];
 
         let mut extension_types = HashMap::new();

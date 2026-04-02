@@ -15,6 +15,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
+use crate::Result;
 use crate::ScalarValue;
 use crate::error::_internal_err;
 use crate::types::extension::DFExtensionType;
@@ -39,32 +40,13 @@ pub struct DFTimestampWithOffset {
     storage_type: DataType,
 }
 
-impl ExtensionType for DFTimestampWithOffset {
-    const NAME: &'static str = TimestampWithOffset::NAME;
-    type Metadata = <TimestampWithOffset as ExtensionType>::Metadata;
-
-    fn metadata(&self) -> &Self::Metadata {
-        self.inner.metadata()
-    }
-
-    fn serialize_metadata(&self) -> Option<String> {
-        self.inner.serialize_metadata()
-    }
-
-    fn deserialize_metadata(
-        metadata: Option<&str>,
-    ) -> Result<Self::Metadata, ArrowError> {
-        TimestampWithOffset::deserialize_metadata(metadata)
-    }
-
-    fn supports_data_type(&self, data_type: &DataType) -> Result<(), ArrowError> {
-        self.inner.supports_data_type(data_type)
-    }
-
-    fn try_new(
+impl DFTimestampWithOffset {
+    /// Creates a new [`DFTimestampWithOffset`], validating that the storage type is compatible with
+    /// the extension type.
+    pub fn try_new(
         data_type: &DataType,
-        metadata: Self::Metadata,
-    ) -> Result<Self, ArrowError> {
+        metadata: <TimestampWithOffset as ExtensionType>::Metadata,
+    ) -> Result<Self> {
         Ok(Self {
             inner: <TimestampWithOffset as ExtensionType>::try_new(data_type, metadata)?,
             storage_type: data_type.clone(),
@@ -85,7 +67,7 @@ impl DFExtensionType for DFTimestampWithOffset {
         &self,
         array: &'fmt dyn Array,
         options: &FormatOptions<'fmt>,
-    ) -> crate::Result<Option<ArrayFormatter<'fmt>>> {
+    ) -> Result<Option<ArrayFormatter<'fmt>>> {
         if array.data_type() != &self.storage_type {
             return _internal_err!(
                 "Unexpected data type for TimestampWithOffset: {}",

@@ -15,9 +15,9 @@
 // specific language governing permissions and limitations
 // under the License.
 
+use crate::Result;
 use crate::types::extension::DFExtensionType;
 use arrow::datatypes::DataType;
-use arrow_schema::ArrowError;
 use arrow_schema::extension::{ExtensionType, Opaque};
 
 /// Defines the extension type logic for the canonical `arrow.opaque` extension type.
@@ -29,32 +29,13 @@ pub struct DFOpaque {
     storage_type: DataType,
 }
 
-impl ExtensionType for DFOpaque {
-    const NAME: &'static str = Opaque::NAME;
-    type Metadata = <Opaque as ExtensionType>::Metadata;
-
-    fn metadata(&self) -> &Self::Metadata {
-        self.inner.metadata()
-    }
-
-    fn serialize_metadata(&self) -> Option<String> {
-        self.inner.serialize_metadata()
-    }
-
-    fn deserialize_metadata(
-        metadata: Option<&str>,
-    ) -> Result<Self::Metadata, ArrowError> {
-        Opaque::deserialize_metadata(metadata)
-    }
-
-    fn supports_data_type(&self, data_type: &DataType) -> Result<(), ArrowError> {
-        self.inner.supports_data_type(data_type)
-    }
-
-    fn try_new(
+impl DFOpaque {
+    /// Creates a new [`DFOpaque`], validating that the storage type is compatible with the
+    /// extension type.
+    pub fn try_new(
         data_type: &DataType,
-        metadata: Self::Metadata,
-    ) -> Result<Self, ArrowError> {
+        metadata: <Opaque as ExtensionType>::Metadata,
+    ) -> Result<Self> {
         Ok(Self {
             inner: <Opaque as ExtensionType>::try_new(data_type, metadata)?,
             storage_type: data_type.clone(),
