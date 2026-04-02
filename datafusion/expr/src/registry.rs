@@ -246,6 +246,8 @@ pub type ExtensionTypeRegistrationRef = Arc<dyn ExtensionTypeRegistration>;
 /// field and create the corresponding [`DFExtensionType`] instance with the correct `n` set.
 ///
 /// The [`DefaultExtensionTypeRegistration`] provides a convenient way of creating registrations.
+///
+/// [`DFExtensionType`]: datafusion_common::types::DFExtensionType
 pub trait ExtensionTypeRegistration: Debug + Send + Sync {
     /// The name of the extension type.
     ///
