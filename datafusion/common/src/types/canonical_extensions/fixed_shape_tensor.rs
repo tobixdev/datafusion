@@ -21,8 +21,13 @@ use arrow::datatypes::DataType;
 use arrow_schema::extension::{ExtensionType, FixedShapeTensor};
 
 /// Defines the extension type logic for the canonical `arrow.fixed_shape_tensor` extension type.
+/// This extension type can be used to store a [tensor](https://en.wikipedia.org/wiki/Tensor) of
+/// a fixed shape.
 ///
-/// See [`DFExtensionType`] for information on DataFusion's extension type mechanism.
+/// See [`DFExtensionType`] for information on DataFusion's extension type mechanism. See also
+/// [`FixedShapeTensor`] for the implementation of arrow-rs, which this type uses internally.
+///
+/// <https://arrow.apache.org/docs/format/CanonicalExtensions.html#fixed-shape-tensor>
 #[derive(Debug, Clone)]
 pub struct DFFixedShapeTensor {
     inner: FixedShapeTensor,

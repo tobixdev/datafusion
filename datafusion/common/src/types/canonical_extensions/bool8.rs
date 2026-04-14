@@ -24,19 +24,28 @@ use arrow::util::display::{ArrayFormatter, DisplayIndex, FormatOptions, FormatRe
 use arrow_schema::extension::{Bool8, ExtensionType};
 use std::fmt::Write;
 
-/// Defines the extension type logic for the canonical `arrow.bool8` extension type.
+/// Defines the extension type logic for the canonical `arrow.bool8` extension type. This extension
+/// type allows storing a Boolean value in a single byte, instead of a single bit.
 ///
-/// See [`DFExtensionType`] for information on DataFusion's extension type mechanism.
+/// See [`DFExtensionType`] for information on DataFusion's extension type mechanism. See also
+/// [`Bool8`] for the implementation of arrow-rs, which this type uses internally.
+///
+/// <https://arrow.apache.org/docs/format/CanonicalExtensions.html#bit-boolean>
 #[derive(Debug, Clone)]
 pub struct DFBool8(Bool8);
 
 impl DFBool8 {
     /// Creates a new [`DFBool8`], validating that the storage type is compatible with the
     /// extension type.
+    ///
+    /// Even though [`DFBool8`] only supports a single storage type ([`DataType::Int8`]), passing-in
+    /// the storage type allows conveniently validating whether this extension type is compatible
+    /// with a given [`DataType`].
     pub fn try_new(
         data_type: &DataType,
         metadata: <Bool8 as ExtensionType>::Metadata,
     ) -> Result<Self> {
+        // Validates the storage type
         Ok(Self(<Bool8 as ExtensionType>::try_new(
             data_type, metadata,
         )?))
@@ -72,7 +81,7 @@ impl DFExtensionType for DFBool8 {
     }
 }
 
-/// Pretty printer for binary UUID values.
+/// Pretty printer for binary bool8 values.
 #[derive(Debug, Clone, Copy)]
 struct Bool8ValueDisplayIndex<'a> {
     array: &'a Int8Array,

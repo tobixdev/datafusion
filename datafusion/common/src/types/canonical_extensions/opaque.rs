@@ -20,9 +20,13 @@ use crate::types::extension::DFExtensionType;
 use arrow::datatypes::DataType;
 use arrow_schema::extension::{ExtensionType, Opaque};
 
-/// Defines the extension type logic for the canonical `arrow.opaque` extension type.
+/// Defines the extension type logic for the canonical `arrow.opaque` extension type. This extension
+/// type represents types that DataFusion cannot interpret.
 ///
-/// See [`DFExtensionType`] for information on DataFusion's extension type mechanism.
+/// See [`DFExtensionType`] for information on DataFusion's extension type mechanism. See also
+/// [`Opaque`] for the implementation of arrow-rs, which this type uses internally.
+///
+/// <https://arrow.apache.org/docs/format/CanonicalExtensions.html#opaque>
 #[derive(Debug, Clone)]
 pub struct DFOpaque {
     inner: Opaque,
