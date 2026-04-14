@@ -1,0 +1,27 @@
+#######
+# Setup test data table
+#######
+statement ok
+CREATE TABLE test_uuid (
+    id UUID,
+    name VARCHAR
+);
+
+#######
+# Tests
+#######
+
+query TTT
+DESCRIBE test_uuid;
+----
+id FixedSizeBinary(16) YES
+name Utf8View YES
+
+query
+SELECT ARROW_FIELD(test_uuid.id) FROM test_uuid;
+
+#######
+# Clean-up
+#######
+statement ok
+DROP TABLE test_uuid;

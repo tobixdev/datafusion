@@ -1,0 +1,27 @@
+#######
+# Setup test data table
+#######
+statement ok
+CREATE TABLE test_json (
+    id Int,
+    data JSON
+);
+
+#######
+# Tests
+#######
+
+query TTT
+DESCRIBE test_json;
+----
+id Int32 YES
+data Utf8View YES
+
+query
+SELECT ARROW_FIELD(test_json.data) FROM test_json;
+
+#######
+# Clean-up
+#######
+statement ok
+DROP TABLE test_json;

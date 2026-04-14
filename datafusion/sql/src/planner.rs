@@ -23,6 +23,7 @@ use std::vec;
 
 use crate::utils::make_decimal_type;
 use arrow::datatypes::*;
+use arrow_schema::extension::{ExtensionType, JsonMetadata};
 use datafusion_common::TableReference;
 use datafusion_common::config::SqlParserOptions;
 use datafusion_common::datatype::{DataTypeExt, FieldExt};
@@ -664,28 +665,26 @@ impl<'a, S: ContextProvider> SqlToRel<'a, S> {
             SQLDataType::Array(ArrayElemTypeDef::None) => {
                 not_impl_err!("Arrays with unspecified type is not supported")
             }
-            other => Ok(self
-                .convert_simple_data_type(other)?
-                .into_nullable_field_ref()),
+            other => Ok(self.convert_simple_data_type(other)?),
         }
     }
 
-    fn convert_simple_data_type(&self, sql_type: &SQLDataType) -> Result<DataType> {
+    fn convert_simple_data_type(&self, sql_type: &SQLDataType) -> Result<FieldRef> {
         match sql_type {
-            SQLDataType::Boolean | SQLDataType::Bool => Ok(DataType::Boolean),
-            SQLDataType::TinyInt(_) => Ok(DataType::Int8),
-            SQLDataType::SmallInt(_) | SQLDataType::Int2(_) => Ok(DataType::Int16),
+            SQLDataType::Boolean | SQLDataType::Bool => Ok(DataType::Boolean.into_nullable_field_ref()),
+            SQLDataType::TinyInt(_) => Ok(DataType::Int8.into_nullable_field_ref()),
+            SQLDataType::SmallInt(_) | SQLDataType::Int2(_) => Ok(DataType::Int16.into_nullable_field_ref()),
             SQLDataType::Int(_) | SQLDataType::Integer(_) | SQLDataType::Int4(_) => {
-                Ok(DataType::Int32)
+                Ok(DataType::Int32.into_nullable_field_ref())
             }
-            SQLDataType::BigInt(_) | SQLDataType::Int8(_) => Ok(DataType::Int64),
-            SQLDataType::TinyIntUnsigned(_) => Ok(DataType::UInt8),
+            SQLDataType::BigInt(_) | SQLDataType::Int8(_) => Ok(DataType::Int64.into_nullable_field_ref()),
+            SQLDataType::TinyIntUnsigned(_) => Ok(DataType::UInt8.into_nullable_field_ref()),
             SQLDataType::SmallIntUnsigned(_) | SQLDataType::Int2Unsigned(_) => {
-                Ok(DataType::UInt16)
+                Ok(DataType::UInt16.into_nullable_field_ref())
             }
             SQLDataType::IntUnsigned(_)
             | SQLDataType::IntegerUnsigned(_)
-            | SQLDataType::Int4Unsigned(_) => Ok(DataType::UInt32),
+            | SQLDataType::Int4Unsigned(_) => Ok(DataType::UInt32.into_nullable_field_ref()),
             SQLDataType::Varchar(length) => {
                 match (length, self.options.support_varchar_with_length) {
                     (Some(_), false) => plan_err!(
@@ -694,21 +693,21 @@ impl<'a, S: ContextProvider> SqlToRel<'a, S> {
                     ),
                     _ => {
                         if self.options.map_string_types_to_utf8view {
-                            Ok(DataType::Utf8View)
+                            Ok(DataType::Utf8View.into_nullable_field_ref())
                         } else {
-                            Ok(DataType::Utf8)
+                            Ok(DataType::Utf8.into_nullable_field_ref())
                         }
                     }
                 }
             }
             SQLDataType::BigIntUnsigned(_) | SQLDataType::Int8Unsigned(_) => {
-                Ok(DataType::UInt64)
+                Ok(DataType::UInt64.into_nullable_field_ref())
             }
-            SQLDataType::Float(_) => Ok(DataType::Float32),
-            SQLDataType::Real | SQLDataType::Float4 => Ok(DataType::Float32),
+            SQLDataType::Float(_) => Ok(DataType::Float32.into_nullable_field_ref()),
+            SQLDataType::Real | SQLDataType::Float4 => Ok(DataType::Float32.into_nullable_field_ref()),
             SQLDataType::Double(ExactNumberInfo::None)
             | SQLDataType::DoublePrecision
-            | SQLDataType::Float8 => Ok(DataType::Float64),
+            | SQLDataType::Float8 => Ok(DataType::Float64.into_nullable_field_ref()),
             SQLDataType::Double(
                 ExactNumberInfo::Precision(_) | ExactNumberInfo::PrecisionAndScale(_, _),
             ) => {
@@ -718,9 +717,9 @@ impl<'a, S: ContextProvider> SqlToRel<'a, S> {
             }
             SQLDataType::Char(_) | SQLDataType::Text | SQLDataType::String(_) => {
                 if self.options.map_string_types_to_utf8view {
-                    Ok(DataType::Utf8View)
+                    Ok(DataType::Utf8View.into_nullable_field_ref())
                 } else {
-                    Ok(DataType::Utf8)
+                    Ok(DataType::Utf8.into_nullable_field_ref())
                 }
             }
             SQLDataType::Timestamp(precision, tz_info)
@@ -744,14 +743,14 @@ impl<'a, S: ContextProvider> SqlToRel<'a, S> {
                     None | Some(9) => TimeUnit::Nanosecond,
                     _ => unreachable!(),
                 };
-                Ok(DataType::Timestamp(precision, tz.map(Into::into)))
+                Ok(DataType::Timestamp(precision, tz.map(Into::into)).into_nullable_field_ref())
             }
-            SQLDataType::Date => Ok(DataType::Date32),
+            SQLDataType::Date => Ok(DataType::Date32.into_nullable_field_ref()),
             SQLDataType::Time(None, tz_info) => {
                 if *tz_info == TimezoneInfo::None
                     || *tz_info == TimezoneInfo::WithoutTimeZone
                 {
-                    Ok(DataType::Time64(TimeUnit::Nanosecond))
+                    Ok(DataType::Time64(TimeUnit::Nanosecond).into_nullable_field_ref())
                 } else {
                     // We don't support TIMETZ and TIME WITH TIME ZONE for now
                     not_impl_err!("Unsupported SQL type {sql_type}")
@@ -766,14 +765,14 @@ impl<'a, S: ContextProvider> SqlToRel<'a, S> {
                         (Some(precision), Some(scale))
                     }
                 };
-                make_decimal_type(precision, scale.map(|s| s as u64))
+                make_decimal_type(precision, scale.map(|s| s as u64)).map(DataType::into_nullable_field_ref)
             }
-            SQLDataType::Bytea => Ok(DataType::Binary),
+            SQLDataType::Bytea => Ok(DataType::Binary.into_nullable_field_ref()),
             SQLDataType::Interval { fields, precision } => {
                 if fields.is_some() || precision.is_some() {
                     return not_impl_err!("Unsupported SQL type {sql_type}");
                 }
-                Ok(DataType::Interval(IntervalUnit::MonthDayNano))
+                Ok(DataType::Interval(IntervalUnit::MonthDayNano).into_nullable_field_ref())
             }
             SQLDataType::Struct(fields, _) => {
                 let fields = fields
@@ -788,11 +787,25 @@ impl<'a, S: ContextProvider> SqlToRel<'a, S> {
                         Ok(field.as_ref().clone().with_name(self.ident_normalizer.normalize(field_name)))
                     })
                     .collect::<Result<Vec<_>>>()?;
-                Ok(DataType::Struct(Fields::from(fields)))
+                Ok(DataType::Struct(Fields::from(fields)).into_nullable_field_ref())
+            }
+            SQLDataType::JSON => {
+                let data_type = if self.options.map_string_types_to_utf8view {
+                    DataType::Utf8View
+                } else {
+                    DataType::Utf8
+                };
+                let extension_type = arrow_schema::extension::Json::try_new(&data_type, JsonMetadata::default())?;
+                let field = Field::new("", data_type, true)
+                    .with_extension_type(extension_type);
+                Ok(Arc::new(field))
+            }
+            SQLDataType::Uuid => {
+                let field = Field::new("", DataType::FixedSizeBinary(16), true)
+                    .with_extension_type(arrow_schema::extension::Uuid);
+                Ok(Arc::new(field))
             }
             SQLDataType::Nvarchar(_)
-            | SQLDataType::JSON
-            | SQLDataType::Uuid
             | SQLDataType::Binary(_)
             | SQLDataType::Varbinary(_)
             | SQLDataType::Blob(_)
@@ -861,7 +874,7 @@ impl<'a, S: ContextProvider> SqlToRel<'a, S> {
             | SQLDataType::HugeInt
             | SQLDataType::UHugeInt
             | SQLDataType::UBigInt
-            | SQLDataType::TimestampNtz{..}
+            | SQLDataType::TimestampNtz { .. }
             | SQLDataType::NamedTable { .. }
             | SQLDataType::TsVector
             | SQLDataType::TsQuery
