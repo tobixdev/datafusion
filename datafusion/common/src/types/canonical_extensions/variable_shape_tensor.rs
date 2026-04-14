@@ -21,8 +21,13 @@ use arrow::datatypes::DataType;
 use arrow_schema::extension::{ExtensionType, VariableShapeTensor};
 
 /// Defines the extension type logic for the canonical `arrow.variable_shape_tensor` extension type.
+/// This extension type can be used to store a [tensor](https://en.wikipedia.org/wiki/Tensor) with
+/// variable shape that can change for each element.
 ///
-/// See [`DFExtensionType`] for information on DataFusion's extension type mechanism.
+/// See [`DFExtensionType`] for information on DataFusion's extension type mechanism. See also
+/// [`VariableShapeTensor`] for the implementation of arrow-rs, which this type uses internally.
+///
+/// <https://arrow.apache.org/docs/format/CanonicalExtensions.html#variable-shape-tensor>
 #[derive(Debug, Clone)]
 pub struct DFVariableShapeTensor {
     inner: VariableShapeTensor,

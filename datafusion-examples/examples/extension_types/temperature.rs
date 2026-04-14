@@ -56,7 +56,7 @@ fn create_session_context() -> Result<SessionContext> {
         |storage_type, metadata| {
             Ok(Arc::new(TemperatureExtensionType::try_new(
                 storage_type,
-                TemperatureUnit::try_from(metadata)?,
+                TemperatureUnit::deserialize(metadata)?,
             )?))
         },
     );
@@ -181,14 +181,10 @@ impl TemperatureUnit {
         };
         result.to_owned()
     }
-}
 
-/// Inverse operation of [`TemperatureUnit::serialize`]. This creates the [`TemperatureUnit`]
-/// value from the serialized string.
-impl TryFrom<Option<&str>> for TemperatureUnit {
-    type Error = ArrowError;
-
-    fn try_from(value: Option<&str>) -> std::result::Result<Self, Self::Error> {
+    /// Inverse operation of [`TemperatureUnit::serialize`]. This creates the [`TemperatureUnit`]
+    /// value from the serialized string.
+    pub fn deserialize(value: Option<&str>) -> std::result::Result<Self, ArrowError> {
         match value {
             Some("celsius") => Ok(TemperatureUnit::Celsius),
             Some("fahrenheit") => Ok(TemperatureUnit::Fahrenheit),

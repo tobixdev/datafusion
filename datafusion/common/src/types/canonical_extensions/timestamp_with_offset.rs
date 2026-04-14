@@ -32,8 +32,12 @@ use arrow_schema::extension::{ExtensionType, TimestampWithOffset};
 use std::fmt::Write;
 
 /// Defines the extension type logic for the canonical `arrow.timestamp_with_offset` extension type.
+/// This extension type allows associating a different offset for each timestamp in a column.
 ///
-/// See [`DFExtensionType`] for information on DataFusion's extension type mechanism.
+/// See [`DFExtensionType`] for information on DataFusion's extension type mechanism. See also
+/// [`TimestampWithOffset`] for the implementation of arrow-rs, which this type uses internally.
+///
+/// <https://arrow.apache.org/docs/format/CanonicalExtensions.html#timestamp-with-offset>
 #[derive(Debug, Clone)]
 pub struct DFTimestampWithOffset {
     inner: TimestampWithOffset,

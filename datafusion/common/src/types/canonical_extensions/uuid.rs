@@ -25,9 +25,14 @@ use arrow_schema::extension::{ExtensionType, Uuid};
 use std::fmt::Write;
 use uuid::Bytes;
 
-/// Defines the extension type logic for the canonical `arrow.uuid` extension type.
+/// Defines the extension type logic for the canonical `arrow.uuid` extension type. This extension
+/// type defines that a field should be interpreted as a
+/// [UUID](https://de.wikipedia.org/wiki/Universally_Unique_Identifier).
 ///
-/// See [`DFExtensionType`] for information on DataFusion's extension type mechanism.
+/// See [`DFExtensionType`] for information on DataFusion's extension type mechanism. See also
+/// [`Uuid`] for the implementation of arrow-rs, which this type uses internally.
+///
+/// <https://arrow.apache.org/docs/format/CanonicalExtensions.html#uuid>
 #[derive(Debug, Clone)]
 pub struct DFUuid(Uuid);
 
