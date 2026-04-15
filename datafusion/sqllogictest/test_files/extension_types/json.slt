@@ -3,9 +3,9 @@
 #######
 statement ok
 CREATE TABLE test_json (
-    id Int,
-    data JSON
-);
+    value JSON
+) AS VALUES
+    (NULL);
 
 #######
 # Tests
@@ -14,11 +14,10 @@ CREATE TABLE test_json (
 query TTT
 DESCRIBE test_json;
 ----
-id Int32 YES
-data Utf8View YES
+value Utf8View YES
 
 query
-SELECT ARROW_FIELD(test_json.data) FROM test_json;
+SELECT ARROW_FIELD(value) FROM test_json;
 
 #######
 # Clean-up

@@ -3,9 +3,9 @@
 #######
 statement ok
 CREATE TABLE test_uuid (
-    id UUID,
-    name VARCHAR
-);
+    value UUID
+) AS VALUES
+    (NULL);
 
 #######
 # Tests
@@ -14,11 +14,10 @@ CREATE TABLE test_uuid (
 query TTT
 DESCRIBE test_uuid;
 ----
-id FixedSizeBinary(16) YES
-name Utf8View YES
+value FixedSizeBinary(16) YES
 
 query
-SELECT ARROW_FIELD(test_uuid.id) FROM test_uuid;
+SELECT ARROW_METADATA(value) FROM test_uuid;
 
 #######
 # Clean-up
