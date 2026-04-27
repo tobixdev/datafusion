@@ -1321,10 +1321,10 @@ impl AsLogicalPlan for LogicalPlanNode {
                     logical_plan_type: Some(LogicalPlanType::Selection(Box::new(
                         protobuf::SelectionNode {
                             input: Some(Box::new(input)),
-                            expr: Some(serialize_expr(
+                            expr: Some(Box::new(serialize_expr(
                                 &filter.predicate,
                                 extension_codec,
-                            )?),
+                            )?)),
                         },
                     ))),
                 })
@@ -1440,7 +1440,7 @@ impl AsLogicalPlan for LogicalPlanNode {
                     null_equality.to_owned().into();
                 let filter = filter
                     .as_ref()
-                    .map(|e| serialize_expr(e, extension_codec))
+                    .map(|e| serialize_expr(e, extension_codec).map(Box::new))
                     .map_or(Ok(None), |v| v.map(Some))?;
                 Ok(LogicalPlanNode {
                     logical_plan_type: Some(LogicalPlanType::Join(Box::new(
@@ -1457,8 +1457,14 @@ impl AsLogicalPlan for LogicalPlanNode {
                     ))),
                 })
             }
-            LogicalPlan::Subquery(_) => {
-                not_impl_err!("LogicalPlan serde is not yet implemented for subqueries")
+            LogicalPlan::Subquery(subquery) => {
+                // Serialize the inner subquery plan directly — the
+                // LogicalPlan::Subquery wrapper is reconstructed during
+                // expression deserialization.
+                LogicalPlanNode::try_from_logical_plan(
+                    &subquery.subquery,
+                    extension_codec,
+                )
             }
             LogicalPlan::SubqueryAlias(SubqueryAlias { input, alias, .. }) => {
                 let input: LogicalPlanNode = LogicalPlanNode::try_from_logical_plan(
