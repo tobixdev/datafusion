@@ -32,12 +32,12 @@ use arrow::record_batch::RecordBatch;
 use datafusion::catalog::{
     CatalogProvider, MemoryCatalogProvider, MemorySchemaProvider, SchemaProvider, Session,
 };
-use datafusion::common::{DataFusionError, Result, not_impl_err};
+use datafusion::common::{not_impl_err, DataFusionError, Result};
 use datafusion::functions::math::abs;
 use datafusion::logical_expr::async_udf::{AsyncScalarUDF, AsyncScalarUDFImpl};
 use datafusion::logical_expr::{
-    ColumnarValue, Expr, ScalarFunctionArgs, ScalarUDF, ScalarUDFImpl, Signature,
-    Volatility, create_udf,
+    create_udf, ColumnarValue, Expr, ScalarFunctionArgs, ScalarUDF, ScalarUDFImpl,
+    Signature, Volatility,
 };
 use datafusion::physical_plan::ExecutionPlan;
 use datafusion::prelude::*;
@@ -50,8 +50,9 @@ use datafusion_spark::SessionStateBuilderSpark;
 use crate::is_spark_path;
 use async_trait::async_trait;
 use datafusion::common::cast::as_float64_array;
-use datafusion::execution::SessionStateBuilder;
 use datafusion::execution::runtime_env::RuntimeEnv;
+use datafusion::execution::SessionStateBuilder;
+use datafusion::logical_expr::registry::MemoryExtensionTypeRegistry;
 use log::info;
 use tempfile::TempDir;
 
@@ -147,6 +148,10 @@ impl TestContext {
             "async_udf.slt" => {
                 info!("Registering dummy async udf");
                 register_async_abs_udf(test_ctx.session_ctx())
+            }
+            "sql_extension_types.slt" | "cast_extension_types_metadata.slt" => {
+                info!("Registering canonical extension types");
+                register_canonical_extension_types(test_ctx.session_ctx());
             }
             _ => {
                 info!("Using default SessionContext");
@@ -585,4 +590,16 @@ fn register_async_abs_udf(ctx: &SessionContext) {
     let async_abs = AsyncAbs::new();
     let udf = AsyncScalarUDF::new(Arc::new(async_abs));
     ctx.register_udf(udf.into_scalar_udf());
+}
+
+/// Registers the canonical extension types in the session context.
+fn register_canonical_extension_types(test_ctx: &SessionContext) {
+    let state = test_ctx.state();
+    let registry = state.extension_type_registry();
+    registry
+        .extend(
+            &MemoryExtensionTypeRegistry::new_with_canonical_extension_types()
+                .all_extension_types(),
+        )
+        .unwrap();
 }

@@ -212,7 +212,7 @@ async fn run_query(
     let stream = execute_stream(plan, task_ctx)?;
     let types = normalize::convert_schema_to_types(stream.schema().fields());
     let results: Vec<RecordBatch> = collect(stream).await?;
-    let rows = normalize::convert_batches(&schema, results, is_spark_path)?;
+    let rows = normalize::convert_batches(ctx, &schema, results, is_spark_path)?;
 
     if rows.is_empty() && types.is_empty() {
         Ok(DBOutput::StatementComplete(0))

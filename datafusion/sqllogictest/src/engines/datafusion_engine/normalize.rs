@@ -19,16 +19,24 @@ use super::super::conversion::*;
 use super::error::{DFSqlLogicTestError, Result};
 use crate::engines::output::DFColumnType;
 use arrow::array::{Array, AsArray};
-use arrow::datatypes::{Fields, Schema};
-use arrow::util::display::ArrayFormatter;
-use arrow::{array, array::ArrayRef, datatypes::DataType, record_batch::RecordBatch};
+use arrow::datatypes::{Field, Fields, Schema};
+use arrow::error::ArrowError;
+use arrow::util::display::{
+    ArrayFormatter, ArrayFormatterFactory, DisplayIndex, FormatOptions, FormatResult,
+};
+use arrow::{array, datatypes::DataType, record_batch::RecordBatch};
+use datafusion::catalog::Session;
 use datafusion::common::internal_datafusion_err;
 use datafusion::config::ConfigField;
+use datafusion::logical_expr::extension_types::DFArrayFormatterFactory;
+use datafusion::prelude::SessionContext;
+use std::fmt::Write;
 use std::path::PathBuf;
-use std::sync::LazyLock;
+use std::sync::{Arc, LazyLock};
 
 /// Converts `batches` to a result as expected by sqllogictest.
 pub fn convert_batches(
+    ctx: &SessionContext,
     schema: &Schema,
     batches: Vec<RecordBatch>,
     is_spark_path: bool,
@@ -44,21 +52,51 @@ pub fn convert_batches(
             )));
         }
 
+        let state = ctx.state();
+        let options = state.config().options().format.clone();
+        let arrow_options: FormatOptions = (&options).try_into()?;
+
+        let registry = state.extension_type_registry();
+        let plain_formatter_factory = DFArrayFormatterFactory::new(Arc::clone(registry));
+        let formatter_factory =
+            NormalizingArrayFormatterFactory::new(plain_formatter_factory, is_spark_path);
+
+        let arrow_options = arrow_options
+            .with_formatter_factory(Some(&formatter_factory))
+            .with_null("NULL");
+
+        let formatters = batch
+            .columns()
+            .iter()
+            .zip(schema.fields())
+            .map(|(col, field)| {
+                let formatter = formatter_factory.create_array_formatter(
+                    col,
+                    &arrow_options,
+                    Some(field),
+                )?;
+
+                match formatter {
+                    None => Ok(ArrayFormatter::try_new(col.as_ref(), &arrow_options)?),
+                    Some(formatter) => Ok(formatter),
+                }
+            })
+            .collect::<std::result::Result<Vec<_>, ArrowError>>()?;
+
         // Convert a single batch to a `Vec<Vec<String>>` for comparison, flatten expanded rows, and normalize each.
         let new_rows = (0..batch.num_rows())
             .map(|row| {
-                batch
-                    .columns()
+                formatters
                     .iter()
-                    .map(|col| cell_to_string(col, row, is_spark_path))
-                    .collect::<Result<Vec<String>>>()
+                    .map(|f| f.value(row).to_string())
+                    .collect::<Vec<String>>()
             })
-            .collect::<Result<Vec<Vec<String>>>>()?
-            .into_iter()
             .flat_map(expand_row)
             .map(normalize_paths);
+
         rows.extend(new_rows);
     }
+
     Ok(rows)
 }
 
@@ -185,7 +223,11 @@ macro_rules! get_row_value {
 /// [NULL Values and empty strings]: https://duckdb.org/dev/sqllogictest/result_verification#null-values-and-empty-strings
 ///
 /// Floating numbers are rounded to have a consistent representation with the Postgres runner.
-pub fn cell_to_string(col: &ArrayRef, row: usize, is_spark_path: bool) -> Result<String> {
+pub fn cell_to_string(
+    col: &dyn Array,
+    row: usize,
+    is_spark_path: bool,
+) -> Result<String> {
     if col.is_null(row) {
         // represent any null value with the string "NULL"
         Ok(NULL_STR.to_string())
@@ -233,7 +275,7 @@ pub fn cell_to_string(col: &ArrayRef, row: usize, is_spark_path: bool) -> Result
             DataType::Dictionary(_, _) => {
                 let dict = col.as_any_dictionary();
                 let key = dict.normalized_keys()[row];
-                Ok(cell_to_string(dict.values(), key, is_spark_path)?)
+                Ok(cell_to_string(dict.values().as_ref(), key, is_spark_path)?)
             }
             _ => {
                 let mut datafusion_format_options =
@@ -241,10 +283,10 @@ pub fn cell_to_string(col: &ArrayRef, row: usize, is_spark_path: bool) -> Result
 
                 datafusion_format_options.set("null", "NULL").unwrap();
 
-                let arrow_format_options: arrow::util::display::FormatOptions =
+                let arrow_format_options: FormatOptions =
                     (&datafusion_format_options).try_into().unwrap();
 
-                let f = ArrayFormatter::try_new(col.as_ref(), &arrow_format_options)?;
+                let f = ArrayFormatter::try_new(col, &arrow_format_options)?;
 
                 Ok(f.value(row).to_string())
             }
@@ -297,4 +339,76 @@ pub fn convert_schema_to_types(columns: &Fields) -> Vec<DFColumnType> {
             _ => DFColumnType::Another,
         })
         .collect()
+}
+
+/// Wraps a [`DFArrayFormatterFactory`] and intercepts formatting columns that must be normalized.
+#[derive(Debug)]
+pub struct NormalizingArrayFormatterFactory {
+    /// The inner formatter factory from DataFusion.
+    inner: DFArrayFormatterFactory,
+    /// Whether the test is a Spark test.
+    is_spark_path: bool,
+}
+
+impl NormalizingArrayFormatterFactory {
+    /// Creates a new [`NormalizingArrayFormatterFactory`].
+    pub fn new(inner: DFArrayFormatterFactory, is_spark_path: bool) -> Self {
+        Self {
+            inner,
+            is_spark_path,
+        }
+    }
+}
+
+impl ArrayFormatterFactory for NormalizingArrayFormatterFactory {
+    fn create_array_formatter<'formatter>(
+        &self,
+        array: &'formatter dyn Array,
+        options: &FormatOptions<'formatter>,
+        field: Option<&'formatter Field>,
+    ) -> std::result::Result<Option<ArrayFormatter<'formatter>>, ArrowError> {
+        // Extension types are always formatted via DataFusion.
+        if let Some(field) = field {
+            if field.extension_type_name().is_some() {
+                return self
+                    .inner
+                    .create_array_formatter(array, options, Some(field));
+            }
+        }
+
+        // Intercept normalizing formatting of columns that must be normalized.
+        match array.data_type() {
+            DataType::Boolean
+            | DataType::Float16
+            | DataType::Float32
+            | DataType::Float64
+            | DataType::Decimal128(_, _)
+            | DataType::Decimal256(_, _)
+            | DataType::Utf8
+            | DataType::LargeUtf8
+            | DataType::Utf8View => {
+                let display = SLTDisplayIndex {
+                    array,
+                    is_spark_path: self.is_spark_path,
+                };
+                Ok(Some(ArrayFormatter::new(Box::new(display), options.safe())))
+            }
+            _ => self.inner.create_array_formatter(array, options, field),
+        }
+    }
+}
+
+/// Implements [`DisplayIndex`] by normalizing the values of the array using [`cell_to_string`].
+struct SLTDisplayIndex<'a> {
+    array: &'a dyn Array,
+    is_spark_path: bool,
+}
+
+impl DisplayIndex for SLTDisplayIndex<'_> {
+    fn write(&self, idx: usize, f: &mut dyn Write) -> FormatResult {
+        let s = cell_to_string(self.array, idx, self.is_spark_path)
+            .map_err(|_| std::fmt::Error)?;
+        write!(f, "{s}")?;
+        Ok(())
+    }
 }
